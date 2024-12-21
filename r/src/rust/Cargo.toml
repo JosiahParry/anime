@@ -12,7 +12,7 @@ name = 'anime'
 arrow = "52.0.0"
 arrow_extendr = "52.0.0"
 extendr-api = '*'
-geoarrow = "0.3.0"
+geoarrow = "0.4.0-beta.3"
 itertools = "0.12.0"
 anime = "0.1.2"
 
