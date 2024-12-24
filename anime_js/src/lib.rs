@@ -11,8 +11,8 @@ use wasm_bindgen::prelude::*;
 
 static START: Once = Once::new();
 
-/// Takes two GeoJSONs, matches LineStrings, and returns the TODO   optional index of the best matching
-/// feature for each target.
+/// Takes two GeoJSONs, matches LineStrings, and returns a mapping from target index to a list of
+/// MatchCandidates (with `source_index` and `shared_length` fields).
 #[wasm_bindgen(js_name = matchLineStrings)]
 pub fn match_linestrings(
     source_gj: String,
@@ -83,7 +83,7 @@ fn transform_matches_map(map: &anime::MatchesMap) -> BTreeMap<usize, Vec<MatchCa
                 *k as usize,
                 v.into_iter()
                     .map(|mc| MatchCandidate {
-                        target_index: mc.index as usize,
+                        source_index: mc.index as usize,
                         shared_length: mc.shared_len,
                     })
                     .collect(),
@@ -94,6 +94,6 @@ fn transform_matches_map(map: &anime::MatchesMap) -> BTreeMap<usize, Vec<MatchCa
 
 #[derive(Serialize)]
 struct MatchCandidate {
-    pub target_index: usize,
+    pub source_index: usize,
     pub shared_length: f64,
 }

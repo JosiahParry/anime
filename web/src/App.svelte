@@ -29,7 +29,7 @@
   };
 
   interface MatchCandidate {
-    target_index: number;
+    source_index: number;
     shared_length: number;
   }
   let matches: { [idx: number]: MatchCandidate[] } = {};
@@ -41,7 +41,7 @@
   $: matchSourceIndices =
     hoveredTarget == null
       ? []
-      : (matches[hoveredTarget.id] ?? []).map((x) => x.target_index);
+      : (matches[hoveredTarget.id] ?? []).map((x) => x.source_index);
 
   function recalculate() {
     try {
