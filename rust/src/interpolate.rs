@@ -45,7 +45,7 @@ impl Anime {
             .iter()
             .map(|(_, matches)| {
                 matches.iter().fold(0.0, |acc, mi| {
-                    let source_idx = mi.index as usize;
+                    let source_idx = mi.source_index;
                     let shared_len = mi.shared_len;
 
                     // Weight = shared length / total length of source geometry
@@ -98,7 +98,7 @@ impl Anime {
                 // Calculate the weighted sum of the source variable values and normalize by the total weight
                 let (numerator, denominator) =
                     matches.iter().fold((0.0, 0.0), |(acc_num, acc_den), mi| {
-                        let source_idx = mi.index as usize;
+                        let source_idx = mi.source_index;
 
                         // Weight based on shared length and target length
                         let wt =

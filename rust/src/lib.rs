@@ -37,17 +37,14 @@ pub type TargetTree = rstar::RTree<GeomWithData<CachedEnvelope<TarLine>, (usize,
 /// Represents a partial source <-> target match
 #[derive(Debug, Clone)]
 pub struct MatchCandidate {
-    /// The index of the target geometry as an i32
-    pub index: i32,
+    /// The index of the source geometry
+    pub source_index: usize,
     /// The amount of shared length between two geometries
     pub shared_len: f64,
 }
 
-/// Stores match length
-///
-/// The BTreeMap key is the index of the source geometry
-/// whereas the entry contains
-pub type MatchesMap = BTreeMap<i32, Vec<MatchCandidate>>;
+/// Maps the index of the target geometry to a list of MatchCandidates
+pub type MatchesMap = BTreeMap<usize, Vec<MatchCandidate>>;
 
 /// Approximate Network Matching, Integration, and Enrichment
 ///
@@ -156,17 +153,16 @@ impl Anime {
                         } else {
                             0.0
                         };
-                        // add 1 for R indexing
                         // ensures that no duplicates are inserted. Creates a new empty vector is needed
-                        let entry = matches.entry(j as i32).or_default();
+                        let entry = matches.entry(j).or_default();
 
-                        if let Some(tuple) = entry.iter_mut().find(|x| x.index == i as i32) {
+                        if let Some(tuple) = entry.iter_mut().find(|x| x.source_index == i) {
                             tuple.shared_len += shared_len;
                         } else {
-                            entry.extend(std::iter::once(MatchCandidate {
-                                index: i as i32,
+                            entry.push(MatchCandidate {
+                                source_index: i,
                                 shared_len,
-                            }));
+                            });
                         }
                     }
                 }
