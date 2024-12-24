@@ -8,20 +8,18 @@ use crate::{
 };
 use geo::{BoundingRect, Distance, Euclidean, Length};
 use rstar::primitives::{CachedEnvelope, GeomWithData};
-use std::{cell::OnceCell, collections::BTreeMap, error::Error, fmt::Display};
+use std::{collections::BTreeMap, error::Error, fmt::Display};
 
 /// Anime Error Type
 #[derive(Debug, Clone, Copy)]
 pub enum AnimeError {
     IncorrectLength,
-    MatchesNotFound,
 }
 
 impl Display for AnimeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             AnimeError::IncorrectLength => write!(f, "Variable to interpolate must have the same number of observations as the `target` lines"),
-            AnimeError::MatchesNotFound => write!(f, "`matches` needs to be instantiated with `self.find_matches()`"),
         }
     }
 }
@@ -66,16 +64,17 @@ pub struct Anime {
     pub source_lens: Vec<f64>,
     pub target_tree: TargetTree,
     pub target_lens: Vec<f64>,
-    pub matches: OnceCell<MatchesMap>,
+    pub matches: MatchesMap,
 }
 
 impl Anime {
-    /// Load source and target `LineString` geometries
+    /// Load source and target `LineString` geometries, then finds candidate matches between
+    /// sources and targets.
     ///
     /// This creates two R* Trees using cached envelopes for each component
     /// line in a LineString. In addition to the envelope, the slope and
     /// index of the LineString is stored.
-    pub fn load_geometries(
+    pub fn new(
         source: impl Iterator<Item = geo_types::LineString>,
         target: impl Iterator<Item = geo_types::LineString>,
         distance_tolerance: f64,
@@ -85,25 +84,9 @@ impl Anime {
         let mut target_lens = Vec::new();
         let source_tree = create_source_rtree(source, &mut source_lens);
         let target_tree = create_target_rtree(target, &mut target_lens, distance_tolerance);
-        Self {
-            distance_tolerance,
-            angle_tolerance,
-            source_tree,
-            source_lens,
-            target_tree,
-            target_lens,
-            matches: OnceCell::new(),
-        }
-    }
 
-    /// Find candidate matches between source and target
-    ///
-    /// The matches can only be found once for each source and target pair.
-    pub fn find_matches(&mut self) -> Result<&mut Anime, MatchesMap> {
         let mut matches: MatchesMap = BTreeMap::new();
-        let candidates = self
-            .source_tree
-            .intersection_candidates_with_other_tree(&self.target_tree);
+        let candidates = source_tree.intersection_candidates_with_other_tree(&target_tree);
 
         candidates.for_each(|(cx, cy)| {
             let xbb = cx.geom().bounding_rect();
@@ -118,7 +101,7 @@ impl Anime {
             let y_deg = y_slope.atan().to_degrees();
 
             // compare slopes:
-            let is_tolerant = (x_deg - y_deg).abs() < self.angle_tolerance;
+            let is_tolerant = (x_deg - y_deg).abs() < angle_tolerance;
 
             // if the slopes are within tolerance then we check for overlap
             if is_tolerant {
@@ -136,7 +119,7 @@ impl Anime {
                     let d = cy.geom().distance(cx.geom());
 
                     // if distance is less than or equal to tolerance, add the key
-                    if d <= self.distance_tolerance {
+                    if d <= distance_tolerance {
                         let shared_len = if x_slope.atan().to_degrees() <= 45.0 {
                             if x_overlap.is_some() {
                                 let (p1, p2) =
@@ -168,8 +151,16 @@ impl Anime {
                 }
             }
         });
-        self.matches.set(matches)?;
-        Ok(self)
+
+        Self {
+            distance_tolerance,
+            angle_tolerance,
+            source_tree,
+            source_lens,
+            target_tree,
+            target_lens,
+            matches,
+        }
     }
 }
 

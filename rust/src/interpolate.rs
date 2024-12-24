@@ -37,11 +37,9 @@ impl Anime {
             return Err(AnimeError::IncorrectLength);
         }
 
-        // Retrieve matches (or return error if not found)
-        let matches = self.matches.get().ok_or(AnimeError::MatchesNotFound)?;
-
         // Interpolate extensive variable
-        let res = matches
+        let res = self
+            .matches
             .iter()
             .map(|(_, matches)| {
                 matches.iter().fold(0.0, |acc, mi| {
@@ -89,10 +87,8 @@ impl Anime {
             return Err(AnimeError::IncorrectLength);
         }
 
-        // Ensure matches are loaded
-        let matches = self.matches.get().ok_or(AnimeError::MatchesNotFound)?;
-
-        let res = matches
+        let res = self
+            .matches
             .iter()
             .map(|(target_idx, matches)| {
                 // Calculate the weighted sum of the source variable values and normalize by the total weight
