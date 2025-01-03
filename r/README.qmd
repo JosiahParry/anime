@@ -2,7 +2,7 @@
 format: gfm
 ---
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<!-- README.md is generated from README.qmd. Please edit that file -->
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -49,7 +49,7 @@ target_fp <- "https://github.com/JosiahParry/anime/raw/refs/heads/main/r/data-ra
 source_fp <- "https://github.com/JosiahParry/anime/raw/refs/heads/main/r/data-raw/geojson/y_negative.geojson"
 
 # This is the source data
-source <- sf::read_sf(source_fp) 
+source_geometry <- sf::read_sf(source_fp) 
 
 # This is the target data, the attributes in the source data will 
 # be added to the geometries of the target
