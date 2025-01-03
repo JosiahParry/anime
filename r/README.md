@@ -158,7 +158,7 @@ summary(sources$value)
 #>    5.00   20.00   30.00   28.16   40.00   40.00     925
 summary(target_interpolated$value)
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
-#>    0.00    0.00   20.00   14.73   27.98   40.00     111
+#>    0.00    0.00   30.00   22.93   34.45   40.00      55
 ```
 
 ``` r
