@@ -49,7 +49,7 @@ dependencies = [
 [[package]]
 name = "anime"
 version = "0.1.2"
-source = "git+https://github.com/josiahparry/anime#c5cc950da386114baad019efc5bb5c4a9cf7ffbb"
+source = "git+https://github.com/josiahparry/anime#211c6c1571196921b491dca8885f8b32c4868228"
 dependencies = [
  "geo",
  "geo-traits",

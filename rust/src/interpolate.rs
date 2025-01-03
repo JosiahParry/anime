@@ -1,3 +1,5 @@
+use core::f64;
+
 use crate::{Anime, AnimeError};
 
 /// Intensive or Extensive Interpolation
@@ -62,9 +64,15 @@ impl Anime {
 
                     // Weight = shared length / total length of source geometry
                     let wt = shared_len / self.source_lens[source_idx];
+                    let sv = source_var[source_idx];
+
+                    // here we handle NA values and NaN by skipping them
+                    if sv.is_nan() || sv == f64::MAX {
+                        return acc;
+                    }
 
                     // Weighted contribution of source variable
-                    acc + (source_var[source_idx] * wt)
+                    acc + (sv * wt)
                 });
                 InterpolatedValue {
                     target_id: *target_id,
@@ -122,7 +130,14 @@ impl Anime {
                         // Weight based on shared length and target length
                         let wt =
                             mi.shared_len / self.target_lens.get(*target_idx as usize).unwrap(); // Using target length for weight
-                        let weighted_value = source_var[source_idx] * wt;
+                        let sv = source_var[source_idx];
+
+                        // here we handle NA values and NaN by skipping them
+                        if sv.is_nan() || sv == f64::MAX {
+                            return (acc_num, acc_den);
+                        }
+
+                        let weighted_value = sv * wt;
 
                         // Update the numerator (weighted sum) and denominator (total weight)
                         (acc_num + weighted_value, acc_den + wt)

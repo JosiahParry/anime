@@ -114,9 +114,9 @@ interpolate_extensive <- function(x, matches) {
     rlang::abort("`x` must be a numeric vector.")
   }
 
-  if (anyNA(x)) {
-    rlang::abort("Cannot interpolate missing values.")
-  }
+  # if (anyNA(x)) {
+  #   rlang::abort("Cannot interpolate missing values.")
+  # }
 
   interpolate_extensive_(as.double(x), matches)
 }
@@ -139,9 +139,9 @@ interpolate_intensive <- function(x, matches) {
     rlang::abort("`x` must be a numeric vector.")
   }
 
-  if (anyNA(x)) {
-    rlang::abort("Cannot interpolate missing values.")
-  }
+  # if (anyNA(x)) {
+  #   rlang::abort("Cannot interpolate missing values.")
+  # }
 
   interpolate_intensive_(as.double(x), matches)
 }
