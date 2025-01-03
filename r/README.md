@@ -1,6 +1,6 @@
 
 
-<!-- README.md is generated from README.Rmd. Please edit that file -->
+<!-- README.md is generated from README.qmd. Please edit that file -->
 
 # anime
 
@@ -29,7 +29,7 @@ library(anime)
 
 `anime` uses the concept of a `target` and `source` linestrings.
 
-`target` linestrings are matched *to* the the `source` linestrings. The
+`target` linestrings are matched *to* the `source` linestrings. The
 amount of overlap between the `target` and `source` linestrings can be
 used to *interpolate attributes* from the `source` *onto* the `target`
 geometries.
@@ -43,13 +43,13 @@ target_fp <- "https://github.com/JosiahParry/anime/raw/refs/heads/main/r/data-ra
 source_fp <- "https://github.com/JosiahParry/anime/raw/refs/heads/main/r/data-raw/geojson/y_negative.geojson"
 
 # This is the source data
-source <- sf::read_sf(source_fp) 
+source_geometry <- sf::read_sf(source_fp) 
 
 # This is the target data, the attributes in the source data will 
 # be added to the geometries of the target
 target <- sf::read_sf(target_fp) 
 
-plot(sf::st_geometry(source), col = source$value)
+plot(sf::st_geometry(source_geometry), col = source_geometry$value)
 plot(sf::st_geometry(target), add = TRUE)
 ```
 
@@ -61,7 +61,7 @@ is to find these partial matches.
 
 ``` r
 matches <- anime::anime(
-  source = source,
+  source = source_geometry,
   target = target,
   distance_tolerance = 0.5,
   angle_tolerance = 5
@@ -79,8 +79,8 @@ matches_tbl
 ```
 
 We can use this information to join the attributes of the source data to
-the target data. In this example we take values from `source` and use
-`reframe()` to create a new data.frame of interpolated values.
+the target data. In this example we take values from `source_geometry`
+and use `reframe()` to create a new data.frame of interpolated values.
 
 > [!NOTE]
 >
@@ -100,7 +100,7 @@ library(dplyr)
 #>     intersect, setdiff, setequal, union
 
 # interpolate values
-interpolated_from_source <- source |> 
+interpolated_from_source <- source_geometry |> 
   reframe(value = interpolate_intensive(value, matches))
 
 # bind them together
@@ -130,12 +130,12 @@ source_fp <- "https://github.com/nptscot/match_linestrings/releases/download/v0.
 target <- sf::read_sf(target_fp) |>
   sf::st_transform(27700)
 
-source <- sf::read_sf(source_fp) |>
+source_geometry <- sf::read_sf(source_fp) |>
   sf::st_transform(27700) |>
   transmute(value = as.numeric(gsub(" mph", "", maxspeed))) 
 
 plot(sf::st_geometry(target))
-plot(source, add = TRUE)
+plot(source_geometry, add = TRUE)
 ```
 
 <img src="man/figures/README-cycle_superhighway_input-1.png"
@@ -144,7 +144,7 @@ style="width:100.0%" />
 ``` r
 # find matches
 matches <- anime::anime(
-  source = source,
+  source = source_geometry,
   target = target,
   # 50 meters distance tolerance 
   distance_tolerance = 50,
@@ -153,9 +153,9 @@ matches <- anime::anime(
 )
 
 target_interpolated <- target |> 
-  mutate(value = interpolate_intensive(source$value, matches))
+  mutate(value = interpolate_intensive(source_geometry$value, matches))
 
-summary(source$value)
+summary(source_geometry$value)
 #>    Min. 1st Qu.  Median    Mean 3rd Qu.    Max.    NA's 
 #>    5.00   20.00   30.00   28.16   40.00   40.00     925
 summary(target_interpolated$value)
@@ -167,8 +167,8 @@ summary(target_interpolated$value)
 library(ggplot2)
 
 ggplot() +
-  geom_sf(aes(color = value), data = source, alpha = 0.2) +
-  geom_sf(aes(color = value), data = sf::st_crop(target_interpolated, sf::st_bbox(source)))
+  geom_sf(aes(color = value), data = source_geometry, alpha = 0.2) +
+  geom_sf(aes(color = value), data = sf::st_crop(target_interpolated, sf::st_bbox(source_geometry)))
 #> Warning: attribute variables are assumed to be spatially constant throughout
 #> all geometries
 ```
