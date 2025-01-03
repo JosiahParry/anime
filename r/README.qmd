@@ -37,7 +37,7 @@ library(anime)
 
 `anime` uses the concept of a `target` and `source` linestrings. 
 
-`target` linestrings are matched _to_ the the `source` linestrings. The amount of overlap between the `target` and `source` linestrings can be used to _interpolate attributes_ from the `source` _onto_ the `target` geometries.
+`target` linestrings are matched _to_ the `source` linestrings. The amount of overlap between the `target` and `source` linestrings can be used to _interpolate attributes_ from the `source` _onto_ the `target` geometries.
 
 
 :::{.callout-important}
