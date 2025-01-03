@@ -50,7 +50,7 @@ anime <- function(source, target, distance_tolerance = 10, angle_tolerance = 5) 
 
 #' @export
 as.data.frame.anime <- function(x, ...) {
-  get_matches_(x)
+  get_matches(x)
 }
 
 #' Get Partial Matches
