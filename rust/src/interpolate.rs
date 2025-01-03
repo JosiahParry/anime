@@ -1,3 +1,5 @@
+use core::f64;
+
 use crate::{Anime, AnimeError};
 
 /// Intensive or Extensive Interpolation
@@ -60,6 +62,11 @@ impl Anime {
                     let source_idx = mi.source_index;
                     let shared_len = mi.shared_len;
 
+                    // here we handle NA values and NaN by skipping them
+                    if mi.shared_len == f64::MAX || mi.shared_len == f64::NAN {
+                        return acc;
+                    }
+
                     // Weight = shared length / total length of source geometry
                     let wt = shared_len / self.source_lens[source_idx];
 
@@ -118,6 +125,11 @@ impl Anime {
                 let (numerator, denominator) =
                     matches.iter().fold((0.0, 0.0), |(acc_num, acc_den), mi| {
                         let source_idx = mi.source_index;
+
+                        // here we handle NA values and NaN by skipping them
+                        if mi.shared_len == f64::MAX || mi.shared_len == f64::NAN {
+                            return (acc_num, acc_den);
+                        }
 
                         // Weight based on shared length and target length
                         let wt =
