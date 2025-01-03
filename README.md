@@ -1,5 +1,6 @@
 # ANIME: Approximate Network Integration, Matching, and Enrichment
 
+
 ANIME is an algorithm that is used to identify partial matching and
 attribute transfer between two sets of linestrings.
 
@@ -13,7 +14,7 @@ docs](https://docs.rs/anime/)). The algorithm also comes with R bindings
 library(sf)
 ```
 
-    Linking to GEOS 3.11.0, GDAL 3.5.3, PROJ 9.1.0; sf_use_s2() is TRUE
+    Linking to GEOS 3.12.1, GDAL 3.8.4, PROJ 9.3.1; sf_use_s2() is TRUE
 
 ``` r
 library(dplyr)
@@ -51,8 +52,8 @@ sources <- read_sf(sources_fp)
 
 # perfomr matches
 matches <- anime(
-  sources,
-  targets,
+  source = sources,
+  target = targets,
   distance_tolerance = 10,
   angle_tolerance = 5
 )
@@ -61,6 +62,7 @@ matches
 ```
 
     <anime>
+    matches: 21
     sources: 8
     targets: 32
     angle tolerance: 5.0

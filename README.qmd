@@ -29,8 +29,8 @@ sources <- read_sf(sources_fp)
 
 # perfomr matches
 matches <- anime(
-  sources,
-  targets,
+  source = sources,
+  target = targets,
   distance_tolerance = 10,
   angle_tolerance = 5
 )
