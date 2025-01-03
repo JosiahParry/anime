@@ -2,3 +2,5 @@ data-raw/generate-test-geojsons_cache/
 src/rust/vendor
 src/Makevars
 src/Makevars.win
+
+/.quarto/

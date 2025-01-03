@@ -49,13 +49,13 @@ target_fp <- "https://github.com/JosiahParry/anime/raw/refs/heads/main/r/data-ra
 source_fp <- "https://github.com/JosiahParry/anime/raw/refs/heads/main/r/data-raw/geojson/y_negative.geojson"
 
 # This is the source data
-sources <- sf::read_sf(source_fp) 
+source <- sf::read_sf(source_fp) 
 
 # This is the target data, the attributes in the source data will 
 # be added to the geometries of the target
 target <- sf::read_sf(target_fp) 
 
-plot(sf::st_geometry(sources), col = sources$value)
+plot(sf::st_geometry(source), col = source$value)
 plot(sf::st_geometry(target), add = TRUE)
 ```
 
@@ -63,8 +63,8 @@ The lines are parallel but are not identical. The objective of `anime` is to fin
 
 ```{r}
 matches <- anime::anime(
-  sources,
-  target,
+  source = source,
+  target = target,
   distance_tolerance = 0.5,
   angle_tolerance = 5
 )
@@ -75,7 +75,7 @@ matches_tbl
 
 
 
-We can use this information to join the attributes of the source data to the target data. In this example we take values from `sources` and use `reframe()` to create a new data.frame of interpolated values.
+We can use this information to join the attributes of the source data to the target data. In this example we take values from `source` and use `reframe()` to create a new data.frame of interpolated values.
 
 :::{.callout-note}
 `interpolate_intensive()` and `interpolate_extensive()` require numeric variables from the `source` and return a numeric vector with the same lengths as `target`.
@@ -85,7 +85,7 @@ We can use this information to join the attributes of the source data to the tar
 library(dplyr)
 
 # interpolate values
-interpolated_from_source <- sources |> 
+interpolated_from_source <- source |> 
   reframe(value = interpolate_intensive(value, matches))
 
 # bind them together
@@ -110,12 +110,12 @@ source_fp <- "https://github.com/nptscot/match_linestrings/releases/download/v0.
 target <- sf::read_sf(target_fp) |>
   sf::st_transform(27700)
 
-sources <- sf::read_sf(source_fp) |>
+source <- sf::read_sf(source_fp) |>
   sf::st_transform(27700) |>
   transmute(value = as.numeric(gsub(" mph", "", maxspeed))) 
 
 plot(sf::st_geometry(target))
-plot(sources, add = TRUE)
+plot(source, add = TRUE)
 ```
 
 
@@ -124,8 +124,8 @@ plot(sources, add = TRUE)
 
 # find matches
 matches <- anime::anime(
-  sources,
-  target,
+  source = source,
+  target = target,
   # 50 meters distance tolerance 
   distance_tolerance = 50,
   # 10° tolerance 
@@ -133,18 +133,18 @@ matches <- anime::anime(
 )
 
 target_interpolated <- target |> 
-  mutate(value = interpolate_intensive(sources$value, matches))
+  mutate(value = interpolate_intensive(source$value, matches))
 
-summary(sources$value)
+summary(source$value)
 summary(target_interpolated$value)
 ```
 
 ```{r}
 library(ggplot2)
 
- ggplot() +
-  geom_sf(aes(color = value), data = sources, alpha = 0.2) +
-  geom_sf(aes(color = value), data = sf::st_crop(target_interpolated, sf::st_bbox(sources)))
+ggplot() +
+  geom_sf(aes(color = value), data = source, alpha = 0.2) +
+  geom_sf(aes(color = value), data = sf::st_crop(target_interpolated, sf::st_bbox(source)))
 ```
 
 
