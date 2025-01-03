@@ -99,6 +99,7 @@ fn anime_print_helper(x: ExternalPtr<Anime>) -> List {
         n_matches = x.matches.get().unwrap().len()
     )
 }
+
 #[extendr]
 fn interpolate_extensive_(source_var: &[f64], anime: ExternalPtr<Anime>) -> Doubles {
     let res = anime.interpolate_extensive(source_var);
@@ -113,6 +114,7 @@ fn interpolate_extensive_(source_var: &[f64], anime: ExternalPtr<Anime>) -> Doub
             }
             res
         }
+
         Err(e) => throw_r_error(format!(
             "Failed to perform extensive interpolation: {:?}",
             e.to_string()

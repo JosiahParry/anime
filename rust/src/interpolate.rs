@@ -62,16 +62,17 @@ impl Anime {
                     let source_idx = mi.source_index;
                     let shared_len = mi.shared_len;
 
+                    // Weight = shared length / total length of source geometry
+                    let wt = shared_len / self.source_lens[source_idx];
+                    let sv = source_var[source_idx];
+
                     // here we handle NA values and NaN by skipping them
-                    if mi.shared_len == f64::MAX || mi.shared_len == f64::NAN {
+                    if sv.is_nan() || sv == f64::MAX {
                         return acc;
                     }
 
-                    // Weight = shared length / total length of source geometry
-                    let wt = shared_len / self.source_lens[source_idx];
-
                     // Weighted contribution of source variable
-                    acc + (source_var[source_idx] * wt)
+                    acc + (sv * wt)
                 });
                 InterpolatedValue {
                     target_id: *target_id,
@@ -126,15 +127,17 @@ impl Anime {
                     matches.iter().fold((0.0, 0.0), |(acc_num, acc_den), mi| {
                         let source_idx = mi.source_index;
 
-                        // here we handle NA values and NaN by skipping them
-                        if mi.shared_len == f64::MAX || mi.shared_len == f64::NAN {
-                            return (acc_num, acc_den);
-                        }
-
                         // Weight based on shared length and target length
                         let wt =
                             mi.shared_len / self.target_lens.get(*target_idx as usize).unwrap(); // Using target length for weight
-                        let weighted_value = source_var[source_idx] * wt;
+                        let sv = source_var[source_idx];
+
+                        // here we handle NA values and NaN by skipping them
+                        if sv.is_nan() || sv == f64::MAX {
+                            return (acc_num, acc_den);
+                        }
+
+                        let weighted_value = sv * wt;
 
                         // Update the numerator (weighted sum) and denominator (total weight)
                         (acc_num + weighted_value, acc_den + wt)

@@ -118,17 +118,13 @@ plot(sf::st_geometry(target))
 plot(sources, add = TRUE)
 ```
 
-At present, interpolation cannot handle missing values. We must find matches without the features with missing values. 
 
 ```{r}
 #| label: cycle_superhighway_output
 
-# filter out missing values before matching
-sources_no_na <- filter(sources, !is.na(value))
-
 # find matches
 matches <- anime::anime(
-  sources_no_na,
+  sources,
   target,
   # 50 meters distance tolerance 
   distance_tolerance = 50,
@@ -137,7 +133,7 @@ matches <- anime::anime(
 )
 
 target_interpolated <- target |> 
-  mutate(value = interpolate_intensive(sources_no_na$value, matches))
+  mutate(value = interpolate_intensive(sources$value, matches))
 
 summary(sources$value)
 summary(target_interpolated$value)
