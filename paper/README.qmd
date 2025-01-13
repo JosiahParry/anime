@@ -273,7 +273,7 @@ plot(xx, lty = 3)
 plot(yy, add = TRUE)
 ```
 
-Being confident that the $A_{ik}$ and $B_{jk}$ are parallelish, we next need to determine if they are within the distance tolerance determined by $DT$. This is done by measuring the minimum separable distance between $A_{ik}$ and $B_{jk}$. If both conditions are satisfied, then the lines are matched. Following, the shared segment length must be calculated.
+Being confident that the $A_{ik}$ and $B_{jk}$ are roughly parallel (within the threshold set by the `angle_threshold` argument), we next need to determine if they are within the distance tolerance determined by $DT$. This is done by measuring the minimum separable distance between $A_{ik}$ and $B_{jk}$. If both conditions are satisfied, then the lines are matched. Following, the shared segment length must be calculated.
 
 ### Caclulating segment overlap 
 
