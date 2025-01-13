@@ -256,19 +256,22 @@ Candidate matches as determined by intersecting AABBs must then be further evalu
 
 ```{r}
 #| fig-cap: "Matched lines with 15° angle tolerance and 2.5 meter distance tolerance."
-mtx <- anime::rnet_match(rnet_x, rnet_y, 2.5, 15)
-
+mtx <- anime::anime(
+  rnet_y,
+  rnet_x,
+  2.5,
+  15
+)
+mtx_df <- as.data.frame(mtx)
 i <- 4
-ydx <- which(mtx$i == i)
+ydx <- which(mtx_df$target_id == i)
 xx <- rnet_x[i]
-yy <- rnet_y$geometry[mtx$j[ydx]]
+yy <- rnet_y$geometry[mtx_df$source_id[ydx]]
 
 # plot the lines that we will measure
 plot(xx, lty = 3)
 plot(yy, add = TRUE)
 ```
-
-
 
 Being confident that the $A_{ik}$ and $B_{jk}$ are parallelish, we next need to determine if they are within the distance tolerance determined by $DT$. This is done by measuring the minimum separable distance between $A_{ik}$ and $B_{jk}$. If both conditions are satisfied, then the lines are matched. Following, the shared segment length must be calculated.
 
