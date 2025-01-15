@@ -24,13 +24,23 @@ The goal of anime is to join the attributes of two spatial datasets based on the
 
 You can install the development version of anime from [GitHub](https://github.com/) with:
 
-``` r
+```{r}
+#| eval: false
 # install.packages("pak")
 pak::pak("JosiahParry/anime/r")
 ```
 
 ```{r}
 library(anime)
+```
+
+## Local development
+
+To develop the R package, clone the repo, open R in the r directory and run the following to load a locally installed version:
+
+```{r}
+#| eval: false
+devtools::load_all()
 ```
 
 ## Basic example

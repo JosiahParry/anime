@@ -21,8 +21,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## Abstract 
 
-Reconciling topologically different linestrings is a fundamental challenge in spatial data science, particularly when attempting to integrate network datasets from disparate sources. Existing methods often struggle with the absence of join keys and the need for wholesale joining of attributes, hindering effective data integration and analysis. In this paper, we propose a novel algorithm for matching two sets of linestrings, implemented in an open-source Rust library with bindings to R and Python. Our algorithm addresses the challenge by identifying topologically similar linestrings and estimating the shared length between each pair of matched linestrings. By leveraging R* spatial indices and angle-based matching criteria, our approach effectively reconciles linestrings with varying topologies. We demonstrate the utility of our algorithm through applications in spatial data analysis, including joins, weighted aggregations, and network subset identification based on shared characteristics. The proposed algorithm offers a robust solution for reconciling linestrings in spatial datasets, with implications for various domains in spatial data science.
-
+Reconciling topologically different linestrings is a fundamental challenge in spatial data science, particularly when attempting to integrate network datasets from disparate sources. Existing methods often struggle with the absence of join keys and the need for wholesale joining of attributes, hindering effective data integration and analysis. In this paper, we propose a novel algorithm for matching two sets of linestrings, implemented in an open-source Rust library with bindings to R and Python. The algorithm, Approximate Network Matching and Integration Enrichment (ANIME), addresses the challenge by identifying topologically similar linestrings and estimating the shared length between each pair of matched linestrings. By leveraging R* spatial indices and angle-based matching criteria, our approach effectively reconciles linestrings with varying topologies. We demonstrate the flexibility, utility and performance of ANIME compared with previous approaches. Applications include transport planning, river network analysis, and ecological modeling, which require joins, weighted aggregations, and network subset identification based on shared characteristics. The proposed algorithm offers a robust solution for reconciling linestrings in spatial datasets, with implications for various domains in spatial data science.
 
 <!--
 
@@ -256,21 +255,24 @@ Candidate matches as determined by intersecting AABBs must then be further evalu
 
 ```{r}
 #| fig-cap: "Matched lines with 15° angle tolerance and 2.5 meter distance tolerance."
-mtx <- anime::rnet_match(rnet_x, rnet_y, 2.5, 15)
-
+mtx <- anime::anime(
+  rnet_y,
+  rnet_x,
+  2.5,
+  15
+)
+mtx_df <- as.data.frame(mtx)
 i <- 4
-ydx <- which(mtx$i == i)
+ydx <- which(mtx_df$target_id == i)
 xx <- rnet_x[i]
-yy <- rnet_y$geometry[mtx$j[ydx]]
+yy <- rnet_y$geometry[mtx_df$source_id[ydx]]
 
 # plot the lines that we will measure
 plot(xx, lty = 3)
 plot(yy, add = TRUE)
 ```
 
-
-
-Being confident that the $A_{ik}$ and $B_{jk}$ are parallelish, we next need to determine if they are within the distance tolerance determined by $DT$. This is done by measuring the minimum separable distance between $A_{ik}$ and $B_{jk}$. If both conditions are satisfied, then the lines are matched. Following, the shared segment length must be calculated.
+Being confident that the $A_{ik}$ and $B_{jk}$ are roughly parallel (within the threshold set by the `angle_threshold` argument), we next need to determine if they are within the distance tolerance determined by $DT$. This is done by measuring the minimum separable distance between $A_{ik}$ and $B_{jk}$. If both conditions are satisfied, then the lines are matched. Following, the shared segment length must be calculated.
 
 ### Caclulating segment overlap 
 
