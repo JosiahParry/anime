@@ -1,5 +1,8 @@
-use anime::{Anime, MatchCandidate};
-use arrow::array::{Float64Array, Int32Array};
+use anime::{interpolate::InterpolatedValue, Anime, MatchCandidate};
+use arrow::{
+    array::{Array, ArrayRef, Float64Array, Int32Array},
+    datatypes::Field,
+};
 use geoarrow::{
     array::{AsNativeArray, LineStringArray, NativeArrayDyn, WKBArray},
     datatypes::NativeType,
@@ -152,5 +155,47 @@ impl PyAnime {
         )
         .unwrap();
         pyo3_arrow::PyTable::try_new(vec![res], schema.clone())
+    }
+
+    pub fn interpolate_intensive(&self, source_var: Vec<f64>) -> PyResult<PyArray> {
+        let n = self.0.target_lens.len();
+        let mut res_array = vec![0.0; n];
+        match self.0.interpolate_intensive(&source_var) {
+            Ok(r) => {
+                for InterpolatedValue { target_id, value } in r {
+                    res_array[target_id] = value;
+                }
+            }
+            Err(e) => {
+                return Err(new_error(e.to_string()));
+            }
+        };
+
+        let res = Arc::new(Float64Array::from(res_array));
+        let dt = res.data_type();
+        let f = Field::new("interpolated_res", dt.clone(), true);
+        let res = PyArray::new(res, Arc::new(f));
+        Ok(res)
+    }
+
+    pub fn interpolate_extensive(&self, source_var: Vec<f64>) -> PyResult<PyArray> {
+        let n = self.0.target_lens.len();
+        let mut res_array = vec![0.0; n];
+        match self.0.interpolate_extensive(&source_var) {
+            Ok(r) => {
+                for InterpolatedValue { target_id, value } in r {
+                    res_array[target_id] = value;
+                }
+            }
+            Err(e) => {
+                return Err(new_error(e.to_string()));
+            }
+        };
+
+        let res = Arc::new(Float64Array::from(res_array));
+        let dt = res.data_type();
+        let f = Field::new("interpolated_res", dt.clone(), true);
+        let res = PyArray::new(res, Arc::new(f));
+        Ok(res)
     }
 }

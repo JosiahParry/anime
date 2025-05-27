@@ -3,5 +3,5 @@ revision = 1
 requires-python = ">=3.8"
 
 [[package]]
-name = "py"
+name = "anime"
 source = { editable = "." }
