@@ -20,7 +20,7 @@ impl Anime {
     /// Perform numeric attribute interpolation
     pub fn interpolate(
         &self,
-        var: Float64Array,
+        var: &Float64Array,
         tensive: Tensive,
     ) -> Result<Float64Array, AnimeError> {
         match tensive {
@@ -41,7 +41,7 @@ impl Anime {
     /// $$
     pub fn interpolate_extensive(
         &self,
-        source_var: Float64Array,
+        source_var: &Float64Array,
     ) -> Result<Float64Array, AnimeError> {
         // Check if `source_var` matches the number of source geometries
         if source_var.len() != self.source_lens.len() {
@@ -101,7 +101,7 @@ impl Anime {
     /// the length of the target.
     pub fn interpolate_intensive(
         &self,
-        source_var: Float64Array,
+        source_var: &Float64Array,
     ) -> Result<Float64Array, AnimeError> {
         let nv = source_var.len();
         let n_tar = self.source_lens.len(); // Assuming target_lens represent target lengths.
