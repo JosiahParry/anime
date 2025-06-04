@@ -3,19 +3,22 @@ title: "ANIME: Approximate Network Integration, Matching, and Enrichment"
 format: gfm
 ---
 
+ANIME is a fast and efficient algorithm to perform partial linestring matching and attribute interpolation between two sets of linestrings.
 
-ANIME is an algorithm that is used to identify partial matching and attribute transfer between two sets of linestrings. 
-
-The core algorithm is implemented in `anime` Rust crate ([see Rust docs](https://docs.rs/anime/)). The algorithm also comes with R bindings (which are a work in progress as of this writing).
-
-
-# Example:
+The core algorithm is implemented in the `anime` Rust crate ([see Rust docs](https://docs.rs/anime/)) with bindings to the algorithm in both R and Python.
 
 
-```{r}
+## What it does
+
+The `anime` algorithm calculates the approximate shared length between two sets of linestrings within a specified **distance** and **angle** tolerance.
+
+For each source linestring, the distance of overlap with a target linestring is stored. The distance of overlap is then used to perform intensive or extensive interpolation of attributes.
+
+## Example
+
+```{r message=FALSE, warning=FALSE}
 library(sf)
 library(dplyr)
-library(tigris)
 library(anime)
 library(ggplot2)
 
@@ -23,24 +26,15 @@ library(ggplot2)
 targets_fp <- system.file("extdata", "maine-osm-targets.fgb", package = "anime")
 sources_fp <- system.file("extdata", "maine-tigris-sources.fgb", package = "anime")
 
-# read into sf objects
+# read files
 targets <- read_sf(targets_fp)
 sources <- read_sf(sources_fp)
 
-# perfomr matches
 matches <- anime(
-  source = sources,
-  target = targets,
-  distance_tolerance = 10,
-  angle_tolerance = 5
+    sources,
+    targets,
+    10, 5
 )
-
-matches
-
-# view original geometries
-plot(st_geometry(sources), lty = 2)
-plot(st_geometry(targets), col = 1:nrow(targets), add = TRUE)
-
 
 # extract matches as a data.frame
 match_tbl <- get_matches(matches)
