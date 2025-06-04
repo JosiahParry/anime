@@ -1,5 +1,7 @@
 use core::f64;
 
+use arrow::array::{Array, Float64Array};
+
 use crate::{Anime, AnimeError};
 
 /// Intensive or Extensive Interpolation
@@ -14,18 +16,13 @@ pub enum Tensive {
     Ex,
 }
 
-pub struct InterpolatedValue {
-    pub target_id: usize,
-    pub value: f64,
-}
-
 impl Anime {
     /// Perform numeric attribute interpolation
     pub fn interpolate(
         &self,
-        var: &[f64],
+        var: Float64Array,
         tensive: Tensive,
-    ) -> Result<Vec<InterpolatedValue>, AnimeError> {
+    ) -> Result<Float64Array, AnimeError> {
         match tensive {
             Tensive::In => self.interpolate_intensive(var),
             Tensive::Ex => self.interpolate_extensive(var),
@@ -44,44 +41,41 @@ impl Anime {
     /// $$
     pub fn interpolate_extensive(
         &self,
-        source_var: &[f64],
-    ) -> Result<Vec<InterpolatedValue>, AnimeError> {
+        source_var: Float64Array,
+    ) -> Result<Float64Array, AnimeError> {
         // Check if `source_var` matches the number of source geometries
         if source_var.len() != self.source_lens.len() {
             return Err(AnimeError::IncorrectLength);
+        }
+
+        if source_var.null_count() > 0 {
+            return Err(AnimeError::ContainsNull);
         }
 
         // Retrieve matches (or return error if not found)
         let matches = self.matches.get().ok_or(AnimeError::MatchesNotFound)?;
 
         // Interpolate extensive variable
-        let res = matches
-            .iter()
-            .map(|(target_id, matches)| {
-                let value = matches.iter().fold(0.0, |acc, mi| {
-                    let source_idx = mi.source_index;
-                    let shared_len = mi.shared_len;
+        let res = matches.iter().map(|(_, matches)| {
+            let value = matches.iter().fold(0.0, |acc, mi| {
+                let source_idx = mi.source_index;
+                let shared_len = mi.shared_len;
 
-                    // Weight = shared length / total length of source geometry
-                    let wt = shared_len / self.source_lens[source_idx];
-                    let sv = source_var[source_idx];
+                // Weight = shared length / total length of source geometry
+                let wt = shared_len / self.source_lens[source_idx];
+                let sv = source_var.value(source_idx);
 
-                    // here we handle NA values and NaN by skipping them
-                    if sv.is_nan() || sv == f64::MAX {
-                        return acc;
-                    }
-
-                    // Weighted contribution of source variable
-                    acc + (sv * wt)
-                });
-                InterpolatedValue {
-                    target_id: *target_id,
-                    value,
+                // here we handle NA values and NaN by skipping them
+                if sv.is_nan() || sv == f64::MAX {
+                    return acc;
                 }
-            })
-            .collect::<Vec<_>>();
 
-        Ok(res)
+                // Weighted contribution of source variable
+                acc + (sv * wt)
+            });
+            value
+        });
+        Ok(Float64Array::from_iter_values(res))
     }
 
     /// Intensive Interpolation from the source to the target
@@ -107,8 +101,8 @@ impl Anime {
     /// the length of the target.
     pub fn interpolate_intensive(
         &self,
-        source_var: &[f64],
-    ) -> Result<Vec<InterpolatedValue>, AnimeError> {
+        source_var: Float64Array,
+    ) -> Result<Float64Array, AnimeError> {
         let nv = source_var.len();
         let n_tar = self.source_lens.len(); // Assuming target_lens represent target lengths.
 
@@ -116,47 +110,44 @@ impl Anime {
             return Err(AnimeError::IncorrectLength);
         }
 
+        if source_var.null_count() > 0 {
+            return Err(AnimeError::ContainsNull);
+        }
+
         // Ensure matches are loaded
         let matches = self.matches.get().ok_or(AnimeError::MatchesNotFound)?;
 
-        let res = matches
-            .iter()
-            .map(|(target_idx, matches)| {
-                // Calculate the weighted sum of the source variable values and normalize by the total weight
-                let (numerator, denominator) =
-                    matches.iter().fold((0.0, 0.0), |(acc_num, acc_den), mi| {
-                        let source_idx = mi.source_index;
+        let res = matches.iter().map(|(target_idx, matches)| {
+            // Calculate the weighted sum of the source variable values and normalize by the total weight
+            let (numerator, denominator) =
+                matches.iter().fold((0.0, 0.0), |(acc_num, acc_den), mi| {
+                    let source_idx = mi.source_index;
 
-                        // Weight based on shared length and target length
-                        let wt =
-                            mi.shared_len / self.target_lens.get(*target_idx as usize).unwrap(); // Using target length for weight
-                        let sv = source_var[source_idx];
+                    // Weight based on shared length and target length
+                    let wt = mi.shared_len / self.target_lens.get(*target_idx as usize).unwrap(); // Using target length for weight
+                    let sv = source_var.value(source_idx);
 
-                        // here we handle NA values and NaN by skipping them
-                        if sv.is_nan() || sv == f64::MAX {
-                            return (acc_num, acc_den);
-                        }
+                    // here we handle NA values and NaN by skipping them
+                    if sv.is_nan() || sv == f64::MAX {
+                        return (acc_num, acc_den);
+                    }
 
-                        let weighted_value = sv * wt;
+                    let weighted_value = sv * wt;
 
-                        // Update the numerator (weighted sum) and denominator (total weight)
-                        (acc_num + weighted_value, acc_den + wt)
-                    });
+                    // Update the numerator (weighted sum) and denominator (total weight)
+                    (acc_num + weighted_value, acc_den + wt)
+                });
 
-                // If the total weight is greater than zero, compute the weighted mean
-                let value = if denominator > 0.0 {
-                    numerator / denominator
-                } else {
-                    0.0 // If no overlap, return 0 or handle differently
-                };
+            // If the total weight is greater than zero, compute the weighted mean
+            let value = if denominator > 0.0 {
+                numerator / denominator
+            } else {
+                0.0 // If no overlap, return 0 or handle differently
+            };
 
-                InterpolatedValue {
-                    target_id: *target_idx,
-                    value,
-                }
-            })
-            .collect::<Vec<_>>();
+            value
+        });
 
-        Ok(res)
+        Ok(Float64Array::from_iter_values(res))
     }
 }
