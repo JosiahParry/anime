@@ -1,6 +1,6 @@
 use anime::{interpolate::InterpolatedValue, Anime, MatchCandidate};
 use arrow::{
-    array::{Array, ArrayRef, Float64Array, Int32Array},
+    array::{Array, Float64Array, Int32Array},
     datatypes::Field,
 };
 use geoarrow::{

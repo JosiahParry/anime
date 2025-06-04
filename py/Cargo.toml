@@ -9,11 +9,8 @@ name = "anime"
 crate-type = ["cdylib"]
 
 [dependencies]
-arrow = { version = "54.2.1", features = ["ffi"], default-features = false }
-dashmap = "6.1.0"
-geo = "0.29.3"
-geo-index = "0.2.0"
-geoarrow = { version = "0.4.0-beta.4", features = ["flatgeobuf", "parquet"] }
+arrow = { version = "54.2.1", default-features = false }
+geoarrow = { version = "0.4.0-beta.4" }
 pyo3 = { version = "0.24.1", features = ["extension-module"] }
 pyo3-arrow = "0.8.0"
 anime = { path = "../rust" }
