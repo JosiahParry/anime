@@ -1,3 +1,4 @@
+pub mod get_matches;
 pub mod interpolate;
 mod overlap;
 pub mod structs;
@@ -16,6 +17,7 @@ pub enum AnimeError {
     IncorrectLength,
     MatchesNotFound,
     AlreadyMatched(MatchesMap),
+    ContainsNull,
 }
 
 impl Display for AnimeError {
@@ -23,7 +25,8 @@ impl Display for AnimeError {
         match self {
             AnimeError::IncorrectLength => write!(f, "Variable to interpolate must have the same number of observations as the `target` lines"),
             AnimeError::MatchesNotFound => write!(f, "`matches` needs to be instantiated with `self.find_matches()`"),
-            AnimeError::AlreadyMatched(_) => write!(f, "matches already found.")
+            AnimeError::AlreadyMatched(_) => write!(f, "matches already found."),
+            AnimeError::ContainsNull => write!(f, "cannot interpolate null values"),
         }
     }
 }
@@ -49,7 +52,9 @@ pub struct MatchCandidate {
 ///
 /// The BTreeMap key is the index of the target geometry
 /// whereas the entry contains
-pub type MatchesMap = BTreeMap<usize, Vec<MatchCandidate>>;
+pub type TargetIndex = usize;
+pub type MatchesMap = BTreeMap<TargetIndex, Vec<MatchCandidate>>;
+pub type Matches = OnceCell<MatchesMap>;
 
 /// Approximate Network Matching, Integration, and Enrichment
 ///
@@ -71,7 +76,7 @@ pub struct Anime {
     pub source_lens: Vec<f64>,
     pub target_tree: TargetTree,
     pub target_lens: Vec<f64>,
-    pub matches: OnceCell<MatchesMap>,
+    pub matches: Matches,
 }
 
 impl Anime {
