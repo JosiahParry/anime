@@ -1,6 +1,8 @@
 ---
-title: "ANIME"
-subtitle: "Approximate Network Integration, Matching, and Enrichment"
+title: "ANIME: Approximate Network Integration, Matching, and Enrichment"
+
+bibliography: refs.bib
+
 author: 
   - name: Josiah Parry
     affiliation: Environmental Systems Research Institute, Redlands, CA, USA 
@@ -11,20 +13,45 @@ author:
   - name: Robin Lovelace
     affiliation: Leeds Institute for Transport Studies, University of Leeds, UK
     orcid: 0000-0001-5679-6536
-format: html
-filters:
-  - pseudocode
-bibliography: refs.bib
+
+format:
+  pdf:
+    include-in-header:
+      text: |
+        \usepackage{lineno}
+        \linenumbers
+
+engine: knitr
+number-sections: true
+execute: 
+  echo: false
+  message: false
+  warning: false
+editor: 
+  markdown: 
+    wrap: sentence
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+```{r}
+#| eval: false
+if (!"quarto" %in% rownames(installed.packages())) {
+  install.packages("quarto")
+}
+quarto::quarto_render("paper/README.qmd")
 ```
 
 
-## Abstract 
+# Abstract {.unnumbered}
 
 Reconciling topologically different linestrings is a fundamental challenge in spatial data science, particularly when attempting to integrate network datasets from disparate sources. Existing methods often struggle with the absence of join keys and the need for wholesale joining of attributes, hindering effective data integration and analysis. In this paper, we propose a novel algorithm for matching two sets of linestrings, implemented in an open-source Rust library with bindings to R and Python. The algorithm, Approximate Network Integration, Matching, and Enrichment (ANIME), addresses the challenge by identifying topologically similar linestrings and estimating the shared length between each pair of matched linestrings. By leveraging R* spatial indices and angle-based matching criteria, our approach effectively reconciles linestrings with varying topologies while supporting m:n correspondence relationships. The system generates weighted relationship metrics including shared length, source-weighted proportions, and target-weighted proportions, enabling both extensive and intensive interpolation methods for attribute transfer. We demonstrate the flexibility, utility and performance of ANIME compared with previous approaches. Applications include transport planning, river network analysis, and ecological modeling, which require joins, weighted aggregations, and network subset identification based on shared characteristics. The proposed algorithm offers a robust solution for reconciling linestrings in spatial datasets, with implications for various domains in spatial data science.
+
+# Keywords {.unnumbered}
+
+{{< pagebreak >}}
+
+# Highlights {.unnumbered}
+
+{{< pagebreak >}}
 
 <!--
 
@@ -38,6 +65,9 @@ Reconciling topologically different linestrings is a fundamental challenge in sp
 - in this paper we introduce a new algorithm to match two sets of linestrings
 - it is implemented in an open source rust library with bindings to R and Python
 -->
+
+# Introduction {.unnumbered}
+
 
 ## Problem Statement 
 
@@ -68,15 +98,16 @@ Reconciling topologically different linestrings is a fundamental challenge in sp
 
 The purpose of this section is to provide clear and concise definitions of terminologies used in the description of this algorithm. 
 
-We will use the simple feature access standards definitions of geometric primitives for the sake of consistency. In our algorithm we make extensive use of **Line** and **LineString** geometric primitives. A Line is defined by two **Point**s that are (x, y) coordinate pairs. A LineString is composed of 2 or more Points and "each consecutive pair of Points defines a Line segment." (@sfa FIXME cite). Each LineString is referred to as a **feature**. An array of features is referred to as a **FeatureCollection** (@geojson_spec). 
+We will use the simple feature access standards definitions of geometric primitives for the sake of consistency. In our algorithm we make extensive use of **Line** and **LineString** geometric primitives. A Line is defined by two **Point**s that are (x, y) coordinate pairs. A LineString is composed of 2 or more Points and "each consecutive pair of Points defines a Line segment." (FIXME: CITE SFA). Each LineString is referred to as a **feature**. An array of features is referred to as a **FeatureCollection** (FIXME: CITE GEOJSON). 
 
-The objective of this algorithm is to identify matches between two LineString FeatureCollections and measure the length of the match. A **match** is a correspondence between features of separate FeatureCollections (@lei_lei_19).
+The objective of this algorithm is to identify matches between two LineString FeatureCollections and measure the length of the match. A **match** is a correspondence between features of separate FeatureCollections (@lei_optimal_2019).
 
-The terminology to refer to the two FeatureCollections is inconsistent in the literature. For example, Zhang (@zhang_2009) refers to the two FeatureCollections as the reference and target whereas the Java Conflation Suite (JCS) (@jcs) refers to these as the reference and subject. 
+The terminology to refer to the two FeatureCollections is inconsistent in the literature. For example, Zhang (@zhang_methods_nodate) refers to the two FeatureCollections as the reference and target whereas the Java Conflation Suite (JCS) (FIXME: CITE JCS) refers to these as the reference and subject. 
 
-Instead, we use define the two FeatureCollections as the **source** and the **target** as utilized by Comber and Zeng's work on areal interpolation (@comber_zeng_2019). The source and target terminology is also much more commonly used in relational database management systems (RDBMS) and in the wider data science ecosystem. The use of these terms is an intentional recognition in the shift towards a more general field of spatial data science. The objective of the matching algorithm is to match features _from_ the source _to_ the target. Often the target is a more detailed and known collection of features.
+Instead, we use define the two FeatureCollections as the **source** and the **target** as utilized by Comber and Zeng's work on areal interpolation (@comber_spatial_2019). The source and target terminology is also much more commonly used in relational database management systems (RDBMS) and in the wider data science ecosystem. The use of these terms is an intentional recognition in the shift towards a more general field of spatial data science. The objective of the matching algorithm is to match features _from_ the source _to_ the target. Often the target is a more detailed and known collection of features.
 
-In the process matching features, **candidate**s are found. A candidate is a source feature that _may_ correspond to a target feature. If a candidate passes tests, it is then deemed a match. After matches have been found, attributes from the source feature are often transferred to the target feature. This process of attribute transfer is referred to as **integration** (FIXME CITE). 
+In the process matching features, **candidate**s are found. A candidate is a source feature that _may_ correspond to a target feature. If a candidate passes tests, it is then deemed a match. After matches have been found, attributes from the source feature are often transferred to the target feature. This process of attribute transfer is referred to as **integration** <!-- FIXME: CITE -->. 
+
 
 ## Existing algorithms 
 
@@ -146,6 +177,20 @@ The proposed algorithm aims to match elements of two sets of LineStrings that ar
 Each LineString is composed of one or more Lines which is comprised of a single start or end point. The approximate network matching algorithm constructs two R* spatial indices over the component lines in $A$ and $B$. Intersection candidates between the two trees are used to limit the search space. For each candidate pair, the angle of the slopes are compared to determine if they are approximately parallel (parallelish). If the slopes are approximately parallel and the lines are within a minimum separable distance of each other, they are considered to match. The overlapping region between the matched lines is used to compute the shared length.
 
 The result of the matching algorithm is a B-tree which can be used to generate a row-compressed sparse matrix.
+
+| Variable/Parameter           | Symbol    | Description                                                                    |
+| ---------------------------- | --------- | ------------------------------------------------------------------------------ |
+| Source features              | $A$       | The input `FeatureCollection` from which features are being matched.           |
+| Target features              | $B$       | The input `FeatureCollection` to which features are being matched.             |
+| Distance Tolerance           | $DT$      | The maximum distance for a line segment in B to search for matches in A.       |
+| Angle Tolerance              | $AT$      | The maximum angle difference between two line segments to be considered parallel. |
+| Shared Length                | $SL_{ij}$ | The length of overlap between a matched source feature $i$ and target feature $j$. |
+| Source-weighted proportion | -         | The proportion of a source feature that is matched to a target feature.        |
+| Target-weighted proportion | -         | The proportion of a target feature that is matched to a source feature.        |
+
+: Summary of key variables and parameters. {#tbl-variables-parameters}
+
+
 
 ### Data Processing Pipeline
 
@@ -320,7 +365,7 @@ Based on the angle of the line $A_{ik}$, $\theta_{A_{ik}}$, we either calculate 
 
 ![](assets/line-seg-overlap-top.png)
 
-If $\theta_{A_{ik}} \le 45^{\circ}$, we calculate the overlap between the range of x values of $A_{ik}$ and $B_{jk}$, $(x_{min}, x_{max})$. Using the slope of $A_{ik}$, solve for the values of y in the equation of the line. Using the calculated values of y, calculate the length of the line segment. If $\theta_{A_{ik}} \gt 45^{\circ}$, we instead calculate the overlap in the range of y values and subsequently solve for x, then calculate the length of the line segment. Note that if there is no overlap in the x or y dimension and even if both matching criteria were met, there will be no shared length, and the resultant value with be 0.
+If $\theta_{A_{ik}} \le 45^{\circ}$, we calculate the overlap between the range of x values of $A_{ik}$ and $B_{jk}$, $(x_{min}, x_{max})$. Using the slope of $A_{ik}$, solve for the values of y in the equation of the line. Using the calculated values of y, calculate the length of the line segment. If $\theta_{A_{ik}} > 45^{\circ}$, we instead calculate the overlap in the range of y values and subsequently solve for x, then calculate the length of the line segment. Note that if there is no overlap in the x or y dimension and even if both matching criteria were met, there will be no shared length, and the resultant value with be 0.
 
 
 ## Algorithm Implementation 
@@ -597,3 +642,4 @@ The system uses a Rust-centric approach with language-specific bridge libraries 
 **Development Dependencies:**
 - `rextendr`: R-Rust bridge for package development and compilation
 - `geoarrow-r`: Remote dependency for geospatial Arrow support
+
