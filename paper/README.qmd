@@ -1,10 +1,13 @@
 ---
 title: "ANIME"
-subtitle: "Approximate Network Matching and Integration Enrichment"
+subtitle: "Approximate Network Integration, Matching, and Enrichment"
 author: 
   - name: Josiah Parry
     affiliation: Environmental Systems Research Institute, Redlands, CA, USA 
     orcid: 0000-0001-9910-865X
+  - name: Zhao Wang
+    affiliation: Leeds Institute for Transport Studies, University of Leeds, UK
+    orcid: 0000-0002-4054-0533
   - name: Robin Lovelace
     affiliation: Leeds Institute for Transport Studies, University of Leeds, UK
     orcid: 0000-0001-5679-6536
@@ -21,7 +24,7 @@ knitr::opts_chunk$set(echo = FALSE)
 
 ## Abstract 
 
-Reconciling topologically different linestrings is a fundamental challenge in spatial data science, particularly when attempting to integrate network datasets from disparate sources. Existing methods often struggle with the absence of join keys and the need for wholesale joining of attributes, hindering effective data integration and analysis. In this paper, we propose a novel algorithm for matching two sets of linestrings, implemented in an open-source Rust library with bindings to R and Python. The algorithm, Approximate Network Matching and Integration Enrichment (ANIME), addresses the challenge by identifying topologically similar linestrings and estimating the shared length between each pair of matched linestrings. By leveraging R* spatial indices and angle-based matching criteria, our approach effectively reconciles linestrings with varying topologies. We demonstrate the flexibility, utility and performance of ANIME compared with previous approaches. Applications include transport planning, river network analysis, and ecological modeling, which require joins, weighted aggregations, and network subset identification based on shared characteristics. The proposed algorithm offers a robust solution for reconciling linestrings in spatial datasets, with implications for various domains in spatial data science.
+Reconciling topologically different linestrings is a fundamental challenge in spatial data science, particularly when attempting to integrate network datasets from disparate sources. Existing methods often struggle with the absence of join keys and the need for wholesale joining of attributes, hindering effective data integration and analysis. In this paper, we propose a novel algorithm for matching two sets of linestrings, implemented in an open-source Rust library with bindings to R and Python. The algorithm, Approximate Network Integration, Matching, and Enrichment (ANIME), addresses the challenge by identifying topologically similar linestrings and estimating the shared length between each pair of matched linestrings. By leveraging R* spatial indices and angle-based matching criteria, our approach effectively reconciles linestrings with varying topologies while supporting m:n correspondence relationships. The system generates weighted relationship metrics including shared length, source-weighted proportions, and target-weighted proportions, enabling both extensive and intensive interpolation methods for attribute transfer. We demonstrate the flexibility, utility and performance of ANIME compared with previous approaches. Applications include transport planning, river network analysis, and ecological modeling, which require joins, weighted aggregations, and network subset identification based on shared characteristics. The proposed algorithm offers a robust solution for reconciling linestrings in spatial datasets, with implications for various domains in spatial data science.
 
 <!--
 
@@ -144,6 +147,41 @@ Each LineString is composed of one or more Lines which is comprised of a single 
 
 The result of the matching algorithm is a B-tree which can be used to generate a row-compressed sparse matrix.
 
+### Data Processing Pipeline
+
+ANIME processes linestring matching through a structured pipeline:
+
+1. **Data Preparation**: Load source and target linestring datasets into appropriate geometric data structures
+2. **Linestring Decomposition**: Break down each LineString into component Line segments for granular analysis
+3. **Spatial Indexing**: Construct R* spatial indices for efficient geometric queries and candidate identification
+4. **Candidate Identification**: Use spatial index intersection to identify potential matches within distance tolerance
+5. **Geometric Validation**: Apply angle-based matching criteria to filter candidates
+6. **Overlap Calculation**: Compute shared segment lengths for validated matches
+7. **Result Generation**: Produce weighted relationship metrics and match tables
+
+### Output Metrics and Relationship Quantification
+
+The algorithm generates comprehensive weighted relationship metrics that quantify the correspondence between matched features:
+
+| Metric           | Description                             | Range           | Purpose |
+| ---------------- | --------------------------------------- | --------------- | ------- |
+| `shared_len`     | Absolute shared length between features | 0 to max length | Quantifies overlap magnitude |
+| `source_weighted`| Proportion of source feature matched    | 0.0 to 1.0+     | Measures source coverage |
+| `target_weighted`| Proportion of target feature matched    | 0.0 to 1.0+     | Measures target coverage |
+
+These metrics enable flexible analysis approaches:
+- **Complete Match Detection**: When both source_weighted and target_weighted approach 1.0
+- **Partial Match Analysis**: Quantifying incomplete correspondences for weighted interpolation
+- **Multi-Match Scenarios**: Handling cases where weighted values exceed 1.0 due to multiple overlapping matches
+
+### Configurable Matching Parameters
+
+ANIME provides configurable tolerance parameters for geometric matching that allow users to adapt the algorithm to different data quality and precision requirements:
+
+| Parameter           | Purpose                                        | Example Value | Impact |
+| ------------------- | ---------------------------------------------- | ------------- | ------ |
+| `distance_tolerance`| Maximum distance between linestrings           | 10 meters     | Controls spatial proximity requirements |
+| `angle_tolerance`   | Maximum angle difference for parallel matching | 5 degrees     | Determines orientation similarity threshold |
 
 ### Identify match candidates
 
@@ -274,7 +312,7 @@ plot(yy, add = TRUE)
 
 Being confident that the $A_{ik}$ and $B_{jk}$ are roughly parallel (within the threshold set by the `angle_threshold` argument), we next need to determine if they are within the distance tolerance determined by $DT$. This is done by measuring the minimum separable distance between $A_{ik}$ and $B_{jk}$. If both conditions are satisfied, then the lines are matched. Following, the shared segment length must be calculated.
 
-### Caclulating segment overlap 
+### Calculating segment overlap 
 
 Once two lines $A_{ik}$ and $B_{jk}$ have been determined to be matches, we need to evaluate how much overlap exists between the two lines. This overlap is defined by the segment length of $A_{ik}$ contained in the overlap in the x or y dimension between $A_{ik}$ or $B_{jk}$. 
 
@@ -412,20 +450,102 @@ $$
   - use results to efficiently narrow down matching candidates for manual verification
 - can be used as a way to very quickly narrow down matches. Shared overlap can be used to provide a binary classification
 
+### Sample Data Integration and Testing
+
+The system includes example datasets for testing and demonstration purposes, enabling users to quickly evaluate the algorithm's performance on real-world data. These datasets represent common scenarios in network conflation, including:
+
+- Road networks from different sources (e.g., OpenStreetMap vs. government transportation datasets)
+- Networks with varying levels of detail and generalization
+- Datasets with different topological representations of the same underlying phenomena
+
+### Usage Workflow
+
+The primary workflow involves a straightforward process that leverages the system's flexible API:
+
+1. **Data Loading**: Import source and target linestring datasets using appropriate geospatial data structures
+2. **Parameter Configuration**: Set distance and angle tolerance parameters based on data characteristics and matching requirements
+3. **Matching Execution**: Call the core `anime()` function with configured geometric tolerance parameters
+4. **Result Extraction**: Use `get_matches()` to obtain tabular match results with weighted metrics
+5. **Attribute Integration**: Apply extensive or intensive interpolation methods for attribute transfer between matched network features
+6. **Analysis and Validation**: Process weighted metrics for network enrichment and quality assessment
+
+The system supports both extensive (additive) and intensive (average) interpolation methods for attribute transfer between matched network features, providing flexibility for different analytical requirements.
 
 ## Discussion
 
+### Technical Limitations and Scope
 
-- This algorithm is limited in that it is designed in $\Bbb{R}^2$ space. As such, there is no support for 3-dimensional or spherical coordinates. It is, however, conceivable to apply the same principles to these scenarios. The challenge, then, is to determine overlap regions, lengths, and lines-segments. 
+This algorithm operates within specific technical constraints that define its applicability:
 
-- 3D could be important though not many network datasets keep track of the height of points. Otherwise, measuring distance in 3 dimension for candidates could be useful.
+**Geometric Constraints:**
+- The algorithm is designed for $\Bbb{R}^2$ Euclidean space and does not support 3-dimensional or spherical coordinates. While it is conceivable to extend the principles to these scenarios, the challenge lies in determining overlap regions, lengths, and line segments in higher-dimensional spaces.
+- Geometries must be in the same coordinate reference system and must be spatially proximal to each other. The algorithm does not work for arbitrarily scaled geometries or datasets requiring significant geometric transformations.
 
-- limited in that the geometries must be in the same coordinate system and must be proximal to eachother. Does not work for arbitrarily scaled geometries
+**Geometric Transformation Limitations:**
+- The algorithm does not handle systematic geometry shifts or require affine transformations to align datasets (Lei, Ting; Lei, Zhen, 2019). Users must ensure that datasets are properly georeferenced and aligned before applying the matching algorithm.
+- No automatic handling of scale differences between datasets, requiring preprocessing for datasets at significantly different scales.
 
+**Performance Considerations:**
+- While the R* spatial indexing provides efficient candidate identification, performance scales with the complexity and density of the input networks.
+- Memory usage increases with the number of line segments, particularly for highly detailed networks with many vertices.
 
-- does not handle geometry shift (Lei, Ting; Lei, Zhen (2019))
-  - we make no affine transformations to handle shifts in geometries 
+### Applications and Use Cases
 
+The flexibility of ANIME enables diverse applications across spatial data science domains:
+
+**Transport Planning:**
+- Integration of road networks from multiple sources for comprehensive transportation analysis
+- Conflation of historical and current road datasets for temporal analysis
+- Matching of planned vs. existing infrastructure for impact assessment
+
+**River Network Analysis:**
+- Reconciliation of hydrographic datasets from different mapping agencies
+- Integration of modeled and observed stream networks for ecological studies
+- Conflation of networks at different scales for multi-resolution analysis
+
+**Ecological Modeling:**
+- Matching of habitat corridors from different data sources
+- Integration of species movement pathways with landscape features
+- Conflation of ecological networks for conservation planning
+
+**Infrastructure Management:**
+- Utility network integration for comprehensive asset management
+- Conflation of as-built vs. design datasets for infrastructure monitoring
+- Integration of sensor networks with physical infrastructure representations
+
+### Future Development Directions
+
+**3D and Spherical Support:**
+- Extension to 3-dimensional coordinate systems for applications requiring elevation data
+- Development of spherical geometry support for global-scale network analysis
+- Integration with 3D city models and building information modeling (BIM) systems
+
+**Enhanced Geometric Processing:**
+- Implementation of additional shape similarity measures beyond angle-based matching
+- Support for curved linestring matching using advanced geometric algorithms
+- Integration of topology-aware matching for complex network structures
+
+**Performance Optimization:**
+- Parallel processing capabilities for large-scale network conflation
+- Streaming algorithms for processing networks that exceed memory capacity
+- GPU acceleration for computationally intensive geometric operations
+
+## Conclusion
+
+This paper presents ANIME (Approximate Network Integration, Matching, and Enrichment), a novel algorithm for matching and integrating linestring datasets from disparate sources. The algorithm addresses fundamental challenges in spatial data science by providing a robust solution for reconciling topologically different networks without requiring semantic join keys.
+
+Key contributions of this work include:
+
+1. **Flexible Matching Framework**: Support for m:n correspondence relationships that accommodate the complex realities of real-world network datasets
+2. **Quantitative Relationship Metrics**: Generation of weighted measures (shared_len, source_weighted, target_weighted) that enable sophisticated attribute interpolation
+3. **High-Performance Implementation**: Rust-based core with R and Python bindings that leverage R* spatial indexing for efficient processing
+4. **Comprehensive Attribute Integration**: Support for both extensive and intensive interpolation methods for numeric and categorical attributes
+
+The algorithm's flexibility makes it applicable across diverse domains including transport planning, river network analysis, ecological modeling, and infrastructure management. By providing quantitative measures of correspondence rather than binary classifications, ANIME enables analysts to make informed decisions about data integration and quality assessment.
+
+Future work will focus on extending the algorithm to support 3-dimensional and spherical coordinate systems, implementing additional geometric similarity measures, and developing performance optimizations for large-scale applications. The open-source implementation ensures that the algorithm can be adapted and extended by the broader geospatial community.
+
+ANIME represents a significant advancement in network conflation methodology, offering a practical and theoretically sound approach to one of the most challenging problems in spatial data integration.
 
 ------
 
@@ -442,3 +562,38 @@ $$
 ::: {#refs}
 :::
  
+
+## System Architecture and Implementation
+
+ANIME follows a multi-layered architecture with a high-performance Rust core and language-specific bindings designed for optimal performance and accessibility across the geospatial community.
+
+### Core Components
+
+The system is built around several key components:
+
+- **Rust Core Algorithm**: High-performance implementation of the approximate network matching algorithm using R* spatial indexing
+- **R Package Bindings**: Primary interface providing seamless integration with the R geospatial ecosystem through `geoarrow`, `arrow`, and `wk` packages
+- **Python Package Bindings**: Secondary interface for Python users, enabling integration with the broader Python geospatial stack
+- **Spatial Indexing Engine**: R* tree implementation for efficient geometric queries and candidate identification
+- **Geometric Processing**: Linestring decomposition, slope calculation, and overlap measurement algorithms
+
+### Language Integration Strategy
+
+The system uses a Rust-centric approach with language-specific bridge libraries that provide native interfaces while maintaining the performance benefits of the core Rust implementation. The R bindings utilize `rextendr` for seamless Rust-R integration, while the Python bindings provide access to the same core functionality through appropriate Python interfaces.
+
+### Dependencies and Technology Stack
+
+**System Requirements:**
+- Cargo (Rust package manager) for building the core algorithm
+- R development tools for R package compilation
+
+**R Package Dependencies:**
+- `geoarrow`: Geospatial Arrow data handling for efficient columnar geometry processing
+- `arrow`: Columnar data processing and memory management
+- `nanoarrow`: Low-level Arrow operations for optimal performance
+- `rlang`: R language utilities and metaprogramming support
+- `wk`: Well-known geometry handling and geometric primitive operations
+
+**Development Dependencies:**
+- `rextendr`: R-Rust bridge for package development and compilation
+- `geoarrow-r`: Remote dependency for geospatial Arrow support

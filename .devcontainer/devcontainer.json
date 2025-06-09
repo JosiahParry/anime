@@ -1,0 +1,25 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the
+// README at: https://github.com/devcontainers/templates/tree/main/src/debian
+{
+	"name": "Debian",
+	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
+	"image": "ghcr.io/geocompx/docker:rust",
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+		  // Add the IDs of extensions you want installed when the container is created.
+		  "extensions": ["reditorsupport.r",
+		  "GitHub.copilot-chat",
+		  "GitHub.copilot-labs",
+		  "GitHub.copilot",
+		  "yzhang.markdown-all-in-one",
+		  "quarto.quarto"
+		   ]
+		}
+	  },
+
+	// Run the script install-additional-dependencies.sh:
+	"postCreateCommand": "apt-get update && apt-get install -y dos2unix && dos2unix ./.devcontainer/postCreateCommand.sh && bash ./.devcontainer/postCreateCommand.sh"
+
+}
+
