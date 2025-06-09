@@ -20,7 +20,12 @@ format:
       text: |
         \usepackage{lineno}
         \linenumbers
-
+        \usepackage{amsmath}
+        \usepackage{algorithm}
+        \usepackage{algpseudocode}
+filters:
+  - pseudocode
+  
 engine: knitr
 number-sections: true
 execute: 
@@ -69,104 +74,38 @@ Network Conflation, Spatial Data Integration, Geometric Matching, Attribute Tran
 
 {{< pagebreak >}}
 
-# Introduction {.unnumbered}
+# Introduction
 
-A central challenge in spatial data science is the reconciliation of vector-based linear network datasets from disparate sources.
-These datasets often represent the same real-world phenomena but possess different underlying topologies and lack common join keys, precluding straightforward integration.
-The process of joining attributes between such networks, known as conflation, is further complicated by the fact that the attributes of one feature are intended to be associated with its specific geometry, not transferred wholesale to another.
-Consequently, a weighted approach is necessary to properly associate attributes during integration.
+A central challenge in transportation science is the reconciliation of vector-based linear network datasets from disparate sources, such as those from different government agencies, commercial providers, or time periods. These datasets often represent the same real-world phenomena but possess different underlying topologies and lack common join keys, precluding straightforward integration. The process of joining attributes between such networks: a critical component of the broader task of **conflation**, is further complicated by the fact that the attributes of one feature (e.g., speed limits, traffic volumes) are intended to be associated with its specific geometry, not transferred wholesale to another. Consequently, a weighted approach is necessary to properly associate attributes during integration. As noted by @lei_optimal_2019, "Due to the complexity and limitations of existing methods, planners and analysts often have to employ a heavily manual conflation process, which is time‐consuming and often prohibitively expensive."
 
-> "Due to the complexity and limitations of existing methods, planners and analysts often have to employ a heavily manual conflation process, which is time‐consuming and often prohibitively expensive." --- Lei & Lei (2019).
+The need for robust automated integration methods is growing as vast quantities of geospatial data are derived from sources like remotely sensed imagery (Samal et al., 2004) and large-scale feature extraction projects. While features from these sources may not be complete or entirely accurate, they can supplement missing data or reflect recent changes in a primary dataset, such as a master road network. Several persistent challenges, however, complicate the matching process. Matching generalized geometry to more detailed representations remains a largely unsolved problem (Kim et al., 2017; Mustiere & Devogele, 2008). Furthermore, a single real-world feature may be represented differently across datasets; for instance, a multi-lane highway could be a single line in one dataset and multiple, parallel lines in another ([@zhang_methods_nodate]). This leads to complex one-to-many or many-to-many correspondence scenarios. In the absence of reliable semantic information or join keys, a purely geometric approach becomes essential (Samal et al., 2004).
 
-This paper introduces a novel method for the spatial interpolation of linear features, which uses approximate network matching to generate a list of strong candidate matches with a quantified measure of shared overlap.
-The results can then be utilized for what is known as 'vertical conflation' through a variety of approaches.
-The need for such methods is growing as vast quantities of geospatial data are derived from sources like remotely sensed imagery (Samal et al., 2004) and large-scale feature extraction projects, such as Google's Open Buildings initiative.
-While features from these sources may not always be complete or entirely accurate, they can supplement missing data or reflect recent changes in a primary dataset.
-
-Several persistent challenges complicate the matching process.
-Matching generalized geometry to more detailed representations remains a largely unsolved problem, often discussed in the context of varying Levels of Detail (LoD) (Kim et al., 2017; Mustiere & Devogele, 2008; Zhang, 2009).
-Furthermore, a single real-world feature may be represented differently across datasets; for instance, a multi-lane highway could be a single line in one dataset and multiple lines in another (Zhang, 2009).
-This leads to complex correspondence scenarios, including one-to-one, one-to-many, many-to-one, or even no correspondence.
-In the absence of reliable semantic information or join keys, a purely geometric approach becomes essential (Kim et al., 2017).
-As Samal et al. (2004) note, a simple spatial overlay of two sources does not automatically reveal these complex correspondences.
-
-
-## Definitions
-
-This section provides clear and concise definitions for the terminology used to describe the algorithm.
-
-For consistency, this work adopts the definitions of geometric primitives from the Simple Feature Access (SFA) standard.
-The algorithm makes extensive use of **Line** and **LineString** geometric primitives.
-A **Line** is defined by two **Points**, which are (x, y) coordinate pairs.
-A **LineString** is composed of two or more Points, where "each consecutive pair of Points defines a Line segment" (FIXME: CITE SFA).
-Each LineString is referred to as a **feature**, and an array of features is a **FeatureCollection** (FIXME: CITE GEOJSON).
-
-The objective of the algorithm is to identify matches between two LineString FeatureCollections and measure the length of the overlap.
-A **match** is a correspondence between features from separate FeatureCollections (@lei_optimal_2019).
-
-Terminology for the two FeatureCollections is inconsistent in the literature.
-For example, Zhang (@zhang_methods_nodate) uses the terms *reference* and *target*, while the Java Conflation Suite (JCS) uses *reference* and *subject* (FIXME: CITE JCS).
-
-This work adopts the terms **source** and the **target**, following Comber and Zeng's work on areal interpolation (@comber_spatial_2019).
-The source and target terminology is more common in relational database management systems (RDBMS) and the broader data science ecosystem.
-The use of these terms reflects a shift towards the more general field of spatial data science.
-The objective of the matching algorithm is to match features _from_ the source _to_ the target.
-Typically, the target is a more detailed and established collection of features.
-
-During the matching process, **candidate**s are identified.
-A candidate is a source feature that _may_ correspond to a target feature.
-If a candidate passes a series of geometric tests, it is deemed a match.
-After matches are found, attributes from the source feature are often transferred to the target feature.
-This process of attribute transfer is referred to as **integration** <!-- FIXME: CITE -->. 
-
-
-## Existing algorithms 
-
-A vast body of literature is dedicated to matching linestring features between datasets.
-These methods can be broadly categorized as binary classification algorithms that determine whether a feature in a source FeatureCollection matches a feature in a target collection.
-The classification is often based on geometric criteria, semantic information, or both.
-Given that the primary challenge often lies in the absence of semantic information, the focus here is on matching based strictly on geometric criteria.
-Common criteria include location (proximity), orientation (angle), length, and shape similarity (often measured by metrics such as Fréchet distance, Hausdorff distance, or the average Euclidean distance between linestring vertices).
-
+A vast body of literature addresses linestring matching, often framing it as a binary classification problem that determines whether a feature in a source dataset matches one in a target collection.
+Given that a primary challenge lies in the absence of semantic information, these methods often rely on geometric criteria such as location (proximity), orientation (angle), length, and shape similarity (e.g., Fréchet or Hausdorff distance, or the average Euclidean distance between linestring vertices).
 Numerous algorithms have been developed, each employing unique strategies.
-Goodchild and Hunter (1997) introduced a buffer-based algorithm that calculates the proportion of a source feature's length covered by a target feature.
-They state that:
+For example, @goodchild_simple_1997 introduced a buffer-based algorithm that calculates the proportion of a source feature's length covered by a target feature.
+Other notable approaches include the Java Conflation Suite (JCS) (FIXME: CITE JCS, 2003), the delimited strokes algorithm by @zhang_methods_nodate, the overline approach by Morgan and Lovelace (FIXME: CITE), and Esri's conflation toolset, which relies on buffer analysis and similarity metrics (FIXME: CITE Esri).
+Kim et al. (2017) developed an algorithm to conflate historic and modern road networks using a C4.5 decision tree to classify matches based on spatial similarity measures, including the "linear directional mean" of line segments, the shorter line median Hausdorff distance (SMHD), and the absolute value of cosine similarity (aCS).
+In contrast, some methods, such as the genetic algorithm proposed by @chehreghan_new_2017, are computationally expensive and do not scale well for large datasets.
+A key limitation of all these methods is their focus on binary classification (a match or not), which fails to capture the partial overlaps endemic to real-world network data.
 
-> a similar approach based on the percentage of the reference source length rather than the tested source might be more related to generalization...
+This paper introduces a new algorithm, Approximate Network Integration, Matching, and Enrichment (ANIME), that addresses these limitations. Instead of a binary classification, ANIME quantifies the degree of correspondence between networks, providing a more nuanced basis for data integration and attribute transfer. The main contributions of this work are:
 
-The algorithm presented here, through its reporting of shared overlap, allows for an adaptation of the Goodchild and Hunter method, using a percentage of source length overlap as a cutoff threshold.
-However, a potential issue arises when a source feature is entirely contained within a target feature but the target extends well beyond it; this is addressed by leaning on principles of areal weighted interpolation.
+1.  A novel algorithm that uses segment-level geometric criteria to match topologically dissimilar networks and quantify their shared length.
+2.  A framework that supports `m:n` relationships and generates weighted metrics suitable for both extensive and intensive attribute interpolation.
+3.  A high-performance, open-source implementation in Rust with bindings for R and Python, ensuring scalability and accessibility.
 
-Other notable approaches include the Java Conflation Suite (JCS) (FIXME: CITE JCS, 2003), the delimited strokes algorithm by Zhang (2009), the overline approach by Morgan and Lovelace (FIXME: CITE), and Esri's conflation toolset, which relies on buffer analysis and similarity metrics (FIXME: CITE Esri).
-Kim et al. (2017) developed an algorithm to conflate historic and modern road networks using a C4.5 decision tree to classify matches based on spatial similarity measures.
-These measures include the "linear directional mean" of line segments, the shorter line median Hausdorff distance (SMHD), and the absolute value of cosine similarity (aCS), the last of which is conceptually similar to the angle-based matching used in this work.
-In contrast, some methods, such as the genetic algorithm proposed by Chehreghan & Abbaspour (2018), are computationally expensive and do not scale well for large datasets.
-  
+The remainder of this paper is organized as follows. Section 2 details the proposed methodology. Section 3 presents a case study applying ANIME to real-world road network data. Section 4 discusses the results and limitations of the approach. Finally, Section 5 provides concluding remarks and suggests directions for future research.
 
-### Spatial Criteria 
+# Methodology
 
-The proposed algorithm can be understood as an extension of established buffer and orientation analysis techniques. It employs two primary spatial criteria:
+This section details the ANIME algorithm, from its conceptual foundation and geometric matching procedures to its methods for attribute integration and its implementation.
 
-- **Location/Proximity:** Measured using a distance tolerance that functions as a search buffer.
-- **Orientation:** Measured by the angle between line segments.
+## Algorithm Overview
 
-The primary point of departure from many existing methods lies in the treatment of length. Most algorithms perform matching based on a holistic measure of similarity between entire LineStrings, such as the average Euclidean, Hausdorff, or Fréchet distance. These metrics evaluate the linestrings in their entirety and are subsequently used to make a binary classification of whether a pair is a match. In contrast, the ANIME algorithm decomposes linestrings into their constituent segments and calculates the actual length of overlap between corresponding segments, rather than using a summary distance metric for the entire features. This approach avoids a binary classification in favor of producing a quantitative measure of correspondence.
+A key feature of the ANIME algorithm is its support for `m:n` correspondence, a departure from many existing algorithms that focus on 1:1 matching. Each feature in the target FeatureCollection can be matched to zero, one, or multiple features in the source FeatureCollection. The approach accommodates all relationship cardinalities, "including one-to-null, null-to-one, one-to-one, one-to-many, many-to-one, and many-to many" (Chehreghan & Abbaspour, 2017). Instead of providing a binary classification, the algorithm identifies potential matches and quantifies their correspondence, allowing for subsequent pruning if desired.
 
-## Algorithm overview 
-
-> "a good matching algorithm should be able to create high quality results at a high speed." --- (Zhang, 2009)
-
-A key feature of the ANIME algorithm is its support for `m:n` correspondence, a departure from many existing algorithms that focus on 1:1 matching. Each feature in the target FeatureCollection can be matched to zero, one, or multiple features in the source FeatureCollection. The approach accommodates all relationship cardinalities, "including one-to-null, null-to-one, one-to-one, one-to-many, many-to-one, and many-to many" (Chehreghan & Abbaspour, 2017). As Lei & Lei (2019) note:
-   
-> Beyond the one‐to‐one case, however, matching becomes more complicated and less well‐defined.
-   
-Instead of providing a binary classification, the algorithm identifies potential matches and quantifies their correspondence, allowing for subsequent pruning if desired.
-
-The proposed algorithm aims to match elements of two sets of LineStrings that are topologically similar and to estimate the amount of shared length between each pair of matched LineStrings.
-
-Each LineString is decomposed into its constituent Line segments. The approximate network matching algorithm then constructs two R*-trees, one for the segments of the source features ($A$) and one for the target features ($B$). Intersections between the spatial indices of the two trees identify candidate pairs, limiting the search space. For each candidate pair, the angles of the line segments are compared to determine if they are approximately parallel (a state referred to as 'parallelish'). If the segments are approximately parallel and are within a specified minimum separable distance, they are considered a match. The overlapping portion of the matched segments is then used to compute the shared length.
-
-The result of the matching algorithm is a data structure (specifically, a B-Tree map) that contains the matched pairs and their shared lengths, which can be readily converted to a sparse matrix representation.
+The proposed algorithm aims to match elements of two sets of LineStrings that are topologically similar and to estimate the amount of shared length between each pair of matched LineStrings. The result of the matching algorithm is a data structure (specifically, a B-Tree map) that contains the matched pairs and their shared lengths, which can be readily converted to a sparse matrix representation.
 
 | Variable/Parameter           | Symbol    | Description                                                                    |
 | ---------------------------- | --------- | ------------------------------------------------------------------------------ |
@@ -181,51 +120,20 @@ The result of the matching algorithm is a data structure (specifically, a B-Tree
 : Summary of key variables and parameters. {#tbl-variables-parameters}
 
 
+## Geometric Matching
 
-### Data Processing Pipeline
+The matching process is performed at the segment level to provide a granular assessment of correspondence. The process involves four main steps: linestring decomposition, spatial indexing to find candidates, geometric validation of candidates, and the calculation of overlap for validated matches.
 
-ANIME processes linestring matching through a structured pipeline:
-
-1.  **Data Preparation**: Source and target linestring datasets are loaded into appropriate geometric data structures.
-2.  **Linestring Decomposition**: Each LineString is broken down into its component Line segments for granular analysis.
-3.  **Spatial Indexing**: R* spatial indices are constructed for efficient geometric queries and candidate identification.
-4.  **Candidate Identification**: The spatial index intersection is used to identify potential matches that are within the specified distance tolerance.
-5.  **Geometric Validation**: Angle-based matching criteria are applied to filter candidates.
-6.  **Overlap Calculation**: Shared segment lengths are computed for validated matches.
-7.  **Result Generation**: Weighted relationship metrics and match tables are produced.
-
-### Output Metrics and Relationship Quantification
-
-The algorithm generates comprehensive weighted relationship metrics that quantify the correspondence between matched features:
-
-| Metric           | Description                             | Range           | Purpose |
-| ---------------- | --------------------------------------- | --------------- | ------- |
-| `shared_len`     | Absolute shared length between features | 0 to max length | Quantifies overlap magnitude |
-| `source_weighted`| Proportion of source feature matched    | 0.0 to 1.0+     | Measures source coverage |
-| `target_weighted`| Proportion of target feature matched    | 0.0 to 1.0+     | Measures target coverage |
-
-These metrics enable flexible analysis approaches:
-
--   **Complete Match Detection**: Indicated when both `source_weighted` and `target_weighted` approach 1.0.
--   **Partial Match Analysis**: Quantifying incomplete correspondences for use in weighted interpolation.
--   **Multi-Match Scenarios**: Handling cases where weighted values exceed 1.0 due to multiple overlapping matches.
-
-### Configurable Matching Parameters
-
-ANIME provides configurable tolerance parameters for geometric matching that allow users to adapt the algorithm to different data quality and precision requirements:
-
-| Parameter           | Purpose                                        | Example Value | Impact |
-| ------------------- | ---------------------------------------------- | ------------- | ------ |
-| `distance_tolerance`| Maximum distance between linestrings           | 10 meters     | Controls spatial proximity requirements |
-| `angle_tolerance`   | Maximum angle difference for parallel matching | 5 degrees     | Determines orientation similarity threshold |
+### Linestring Decomposition
+Each LineString in both the source and target datasets is broken down into its component Line segments. This decomposition allows for a granular analysis where matching is performed between individual segments rather than entire, complex features, which is essential for handling topological dissimilarity.
 
 ### Identify match candidates
 
-To identify matches between $A$ and $B$, the algorithm does not evaluate the LineStrings in their totality, but rather by their individual components. The sets $A$ and $B$ are comprised of one or more LineStrings, indexed by $i$ and $j$ respectively. Each LineString is composed of one or more lines, indexed as $k$. Matches are found between the segments $A_{ik}$ and $B_{jk}$ using two R*-trees. 
+To identify matches between $A$ and $B$ we do not look at the LineStrings in their totality, but rather, by their individual components. $A$ and $B$ are comprised of one or more LineStrings index by $i$ and $j$ respectively. Each linestring is composed of one or more lines indexed as $k$. Matches are found between elements of $A_{ik}$ and $B_{jk}$ using two R-trees. 
 
-An empty R*-tree, $Tree_A$, is created. For each line segment $A_{ik}$, its slope is computed, and the geometry, slope, and index are inserted into the tree. 
+We create an empty R-tree, $Tree_A$. For each line $A_{ik}$ we compute the slope of the line and insert the geometry, slope, and index into the tree. 
 
-Next, another empty R*-tree, $Tree_B$, is created to store each line in $B_{jk}$. However, instead of using the axis-aligned bounding box (AABB) of $B_{jk}$, a new, larger one is generated based on a distance tolerance, $DT$. This tolerance is used to expand the search space for matches. The AABB of $B_{jk}$ is computed and then expanded by $DT$ in both the x and y directions. Following this expansion, the geometry, slope, and index are inserted into $Tree_B$.
+Next we create another empty R-tree, $Tree_B$, in which we will store each line in $B_{jk}$. However, instead of using the axis-aligned bounding box of $B_{jk}$, we create a newer, larger one, based on a distance tolerance, $DT$. The distance tolerance is used to expand the search for matches. We compute the AABB of $B_{jk}$, then expand the AABB by $DT$ in both the x and y directions. After doing so, we insert the geometry, slope, and index into $Tree_B$
 
 ```{r message = FALSE, echo = FALSE}
 #| layout-ncol: 2
@@ -315,17 +223,17 @@ p1
 p2
 ```
 
-
-If the AABBs of segments from $Tree_A$ and $Tree_B$ intersect, it indicates that the lines $A_{ik}$ and $B_{jk}$ might be within the distance tolerance $DT$ of each other and should be evaluated as potential matches. 
+If AABBs between $Tree_A$ and $Tree_B$ are intersecting, it means that that the lines $A_{ik}$ and $B_{jk}$ might be within $DT$ of each other and should be checked to see if they are considered matches. 
 
 ```{r}
 p3
 ```
 
-
-### Matching Criteria 
-
-Candidate matches, as determined by intersecting AABBs, must be further evaluated. To be considered a match, lines $A_{ik}$ and $B_{jk}$ must be approximately parallel (or 'parallelish'). To this end, an angle tolerance, $AT$, is defined. The inverse tangent of the slopes of lines $A_{ik}$ and $B_{jk}$ is taken to find their respective angles. If the absolute difference between these two angles is less than or equal to $AT$, they are deemed tolerant, or parallelish.
+### Geometric Validation (Angle and Distance Tolerances)
+Candidate matches identified through spatial indexing are further validated based on two geometric criteria: orientation and proximity.
+A candidate pair of segments, $A_{ik}$ and $B_{jk}$, are considered a match only if they are approximately parallel and within the specified distance tolerance.
+Parallelism is determined by comparing the absolute difference between the segments' angles against an angle tolerance, $AT$.
+Proximity is confirmed by measuring the minimum separable distance between the segments and ensuring it is less than or equal to the distance tolerance, $DT$.
 
 ```{r}
 #| fig-cap: "Matched lines with 15° angle tolerance and 2.5 meter distance tolerance."
@@ -346,20 +254,46 @@ plot(xx, lty = 3)
 plot(yy, add = TRUE)
 ```
 
-Once it is confirmed that $A_{ik}$ and $B_{jk}$ are roughly parallel (within the threshold set by the `angle_threshold` argument), the next step is to determine if they are within the distance tolerance $DT$. This is accomplished by measuring the minimum separable distance between $A_{ik}$ and $B_{jk}$. If both the angle and distance conditions are satisfied, the lines are matched. Subsequently, the shared segment length is calculated.
+Being confident that the $A_{ik}$ and $B_{jk}$ are roughly parallel (within the threshold set by the `angle_threshold` argument), we next need to determine if they are within the distance tolerance determined by $DT$. This is done by measuring the minimum separable distance between $A_{ik}$ and $B_{jk}$. If both conditions are satisfied, then the lines are matched. Following, the shared segment length must be calculated.
 
-### Calculating segment overlap 
+### Calculating segment overlap
 
-Once two line segments $A_{ik}$ and $B_{jk}$ have been determined to be a match, the extent of their overlap must be calculated. This overlap is defined by projecting the segments onto an axis and measuring the length of their common interval.
+Once two lines $A_{ik}$ and $B_{jk}$ have been determined to be matches, we need to evaluate how much overlap exists between the two lines. This overlap is defined by the segment length of $A_{ik}$ contained in the overlap in the x or y dimension between $A_{ik}$ or $B_{jk}$. 
 
-Based on the angle of the line $A_{ik}$, $\theta_{A_{ik}}$, the overlap is calculated in either the x or y dimension. 
+Based on the angle of the line $A_{ik}$, $\theta_{A_{ik}}$, we either calculate the overlap in the line segments in either the x or y dimension. 
 
 ![](assets/line-seg-overlap-top.png)
 
-If $\theta_{A_{ik}} \le 45^{\circ}$, the overlap is calculated between the projected intervals of $A_{ik}$ and $B_{jk}$ on the x-axis. The length of this overlapping interval is then used with the slope of $A_{ik}$ to determine the corresponding length along the segment itself. If $\theta_{A_{ik}} > 45^{\circ}$, the same procedure is applied using the y-axis. If there is no overlap in the projected dimension, the shared length is zero, even if both matching criteria were met.
+### Attribute Integration
+ANIME provides methods for transferring attributes between matched features, supporting both numeric and categorical data types using principles from areal weighted interpolation.
 
+#### Extensive Numeric Attribute Integration
 
-## Algorithm Implementation 
+For extensive variables (e.g., counts), the value for a target feature $j$, $\hat{Y}_j$, is estimated by summing the contributions from all matching source features $i$. The contribution of each source feature is its value $Y_i$ weighted by the proportion of its length that is shared with the target feature.
+
+$$
+\hat{Y}_j = \sum_{i} \frac{SL_{ij}}{\text{length}(i)} \times Y_i \tag{1}
+$$
+ 
+For intensive variables (e.g., averages, rates), the value for a target feature $j$, $\hat{Y}_j$, is estimated as the weighted average of the values from all matching source features. The value of each source feature $Y_i$ is weighted by the proportion of the target feature's length that it shares.
+
+$$
+\hat{Y}_j = \frac{\sum_{i} (SL_{ij} \times Y_i)}{\sum_{i} SL_{ij}} \tag{2}
+$$
+
+#### Extensive Categorical Attribute Integration
+
+For categorical variables, the same integration methods are applied.
+First, the categorical variable is transformed into a set of binary dummy variables, one for each category.
+For a category $k$, the dummy variable $Y_{ik}$ is 1 if source feature $i$ has category $k$, and 0 otherwise.
+
+Equations (1) and (2) can then be used to integrate these dummy variables.
+Applying the extensive integration method (Equation 1) to $Y_{ik}$ yields the total length-weighted "count" of a category transferred to the target feature.
+Applying the intensive integration method (Equation 2) yields the proportion of the matched length of the target feature that corresponds to category $k$.
+
+### Implementation
+
+ANIME is implemented in Rust to ensure high performance, with bindings for R and Python to provide accessibility to a broad audience of data scientists. The core algorithm leverages the `rstar` crate for R*-tree spatial indexing. The pseudocode for the approximate network matching algorithm is presented below.
 
 ```pseudocode
 #| label: alg-approx-net-matching
@@ -384,22 +318,17 @@ If $\theta_{A_{ik}} \le 45^{\circ}$, the overlap is calculated between the proje
   
   \State $Tree_B \gets$ InitializeEmptyRTree()
   \For{each $B_{jk} \in B$}
-    \State $AABB_{B_{jk}} \gets$ GetAABB($B_{jk}$)
-    \State $expandedAABB_{B_{jk}} \gets$ ExpandAABB($AABB_{B_{jk}}, DT$)
-    \State $slope_{B_{jk}} \gets$ ComputeSlope($B_{jk}$)
-    \State InsertIntoRTree($Tree_B, j, B_{jk}, expandedAABB_{B_{jk}}, slope_{B_{jk}}$)
+    \State $expandedAABB_{B_{jk}} \gets$ ExpandAABB($B_{jk}, DT$)
+    \State InsertIntoRTree($Tree_B, j, B_{jk}, expandedAABB_{B_{jk}}$)
   \EndFor
   
-  \State $MatchedPairs \gets$ InitializeEmptyCollection()
-  \State // Identify potential match candidates by intersecting R-trees
-  \For{each pair $(A_{ik}, B_{jk})$ where AABB of $A_{ik}$ intersects $expandedAABB_{B_{jk}}$}
+  \State // Identify potential match candidates
+  \For{each pair $(A_{ik}, B_{jk})$ with intersecting AABBs}
     \If{IsParallelish($slope_{A_{ik}}, slope_{B_{jk}}, AT$) and IsWithinDistance($A_{ik}, B_{jk}, DT$)}
       \State // Calculate shared segment length
       \State $overlapLength \gets$ CalculateOverlapLength($A_{ik}, B_{jk}$)
-      \If{$overlapLength > 0$}
-        \State // Store matched pair and overlap length
-        \State StoreOrUpdateMatchedPair($MatchedPairs, A_i, B_j, overlapLength$)
-      \EndIf
+      \State // Store matched pair and overlap length
+      \State StoreOrUpdateMatchedPair($A_{ik}, B_{jk}, overlapLength$)
     \EndIf
   \EndFor
   
@@ -421,104 +350,169 @@ If $\theta_{A_{ik}} \le 45^{\circ}$, the overlap is calculated between the proje
 \Function{CalculateOverlapLength}{$A_{ik}, B_{jk}$}
   \State $\theta_{A_{ik}} \gets$ ComputeAngle($A_{ik}$)
   \If{$\theta_{A_{ik}} \le 45^\circ$}
-    \State $overlapLength \gets$ CalculateXOverlapAndLength($A_{ik}, B_{jk}$)
+    \State $overlapLength \gets$ CalculateXOverlap($A_{ik}, B_{jk}$)
   \Else
-    \State $overlapLength \gets$ CalculateYOverlapAndLength($A_{ik}, B_{jk}$)
+    \State $overlapLength \gets$ CalculateYOverlap($A_{ik}, B_{jk}$)
   \EndIf
   \State \Return $overlapLength$
 \EndFunction
 \end{algorithmic}
 \end{algorithm}
+```
+## Case Study
+
+The experimental setup involves matching the source network to the target network using ANIME.
+The parameters for the matching process were selected to accommodate minor discrepancies in geometry between the datasets.
+A `distance_tolerance` of 2.5 meters was used to define the search radius for candidate segments, and an `angle_tolerance` of 15 degrees was used to identify segments with a similar orientation.
+
+```{r}
+#| label: setup-case-study
+#| include: false
+suppressMessages(library(sf))
+suppressMessages(library(dplyr))
+suppressMessages(library(ggplot2))
+
+# Load source and target data
+crop_box <- st_bbox(c("xmin" = 427200, xmax = 427500, ymin = 433550, ymax = 433700))
+
+target_sf <- "https://raw.githubusercontent.com/nptscot/networkmerge/main/data/rnet_armley.geojson" |>
+  read_sf() |>
+  st_geometry() |>
+  st_transform(27700) |>
+  st_crop(crop_box) |>
+  st_sf()
+
+source_sf <- "https://raw.githubusercontent.com/nptscot/networkmerge/main/data/rnet_armley_line.geojson" |>
+  read_sf() |>
+  st_crop(crop_box) |>
+  st_transform(27700)
+
+# Add attributes to the source data for integration
+set.seed(123)
+source_sf$speed_limit <- sample(c(20, 30, 40), nrow(source_sf), replace = TRUE)
+source_sf$road_type <- sample(c("residential", "primary"), nrow(source_sf), replace = TRUE)
+source_sf$source_id <- 1:nrow(source_sf)
+
+# Run ANIME
+match_matrix <- anime::anime(
+  source_sf,
+  target_sf,
+  distance_tolerance = 2.5,
+  angle_tolerance = 15
+)
+
+match_df <- as.data.frame(match_matrix)
+
+# Perform attribute integration
+match_df_attr <- merge(match_df, st_drop_geometry(source_sf), by = "source_id")
+
+# Intensive numeric integration
+intensive_numeric <- match_df_attr |>
+  group_by(target_id) |>
+  summarise(
+    speed_limit_integrated = sum(shared_len * speed_limit) / sum(shared_len)
+  )
+
+# Intensive categorical integration
+road_type_dummies <- model.matrix(~ road_type - 1, data = match_df_attr)
+match_df_attr_dummies <- cbind(match_df_attr, road_type_dummies)
+
+intensive_categorical <- match_df_attr_dummies |>
+  group_by(target_id) |>
+  summarise(
+    residential_prop = sum(shared_len * road_typeresidential) / sum(shared_len),
+    primary_prop = sum(shared_len * road_typeprimary) / sum(shared_len)
+  )
+
+# Combine results
+target_sf$target_id <- 1:nrow(target_sf)
+integrated_sf <- merge(target_sf, intensive_numeric, by = "target_id", all.x = TRUE)
+integrated_sf <- merge(integrated_sf, intensive_categorical, by = "target_id", all.x = TRUE)
+```
+
+## Results
+
+The results of the matching and attribute integration are presented below.
+They demonstrate the algorithm's ability to handle m:n relationships and perform weighted attribute transfer.
+
+### Matching Results
+
+The matching process generated a sparse matrix detailing the shared length between every source and target feature pair.
+The following table shows a sample of the match list, detailing the source and target feature IDs and the calculated shared length.
+The visualization in @fig-plot-matches illustrates a one-to-many match, where one target feature is matched with multiple source features, highlighting ANIME's ability to identify complex correspondences.
+
+```{r}
+#| label: table-match-results
+#| echo: false
+knitr::kable(
+  head(match_df),
+  caption = "Sample of matched pairs with shared length."
+)
+```
+
+```{r}
+#| label: fig-plot-matches
+#| fig-cap: "Example of a one-to-many match. One target feature (blue, dashed) is matched with multiple source features (red, solid)."
+#| echo: false
+i <- 4
+target_feature <- target_sf[i,]
+source_indices <- match_df$source_id[match_df$target_id == i]
+source_features <- source_sf[source_indices,]
+
+ggplot() +
+  geom_sf(data = source_features, color = "red", linewidth = 1) +
+  geom_sf(data = target_feature, linetype = "dashed", color = "blue", linewidth = 1.2) +
+  labs(title = "One-to-Many Match Example") +
+  theme_void()
 
 ```
 
-## Integration of Numeric Attributes
+### Attribute Integration Results
 
+Using the match list, attributes from the source network were integrated onto the target network.
+The `speed_limit` (numeric, intensive) and `road_type` (categorical) attributes were transferred.
 
-This work integrates principles from areal weighted interpolation and geometric conflation to provide an algorithm that not only matches geometries but also performs attribute interpolation for both complete and partial matches.
-By de-emphasizing the importance of exact 1:1 matches and relying on principles of spatial interpolation, it is possible to integrate datasets that are not representations of identical phenomena but rather similar ones. This effectively removes the emphasis on measures of fit.
+For the intensive numeric attribute `speed_limit`, the value for each target feature was calculated as the shared-length weighted average of the `speed_limit` from all its matched source features, using Equation (2).
 
-In cases where a complete match is identified, the process amounts to a 1:1 attribute transfer.
-For partial matches, intensive and extensive attribute transfer methods are employed (FIXME: CITE r-spatial book and Tobler/pysal).
-Note that the total shared length between a source feature $i$ and a target feature $j$ may exceed the length of either feature.
-This occurs when multiple segments of one feature match to segments of the other, a common scenario for parallel or winding geometries.
- 
- 
-### Extensive Numeric Attribute Integration
+For the categorical attribute `road_type`, the proportion of each target feature corresponding to a specific road type was calculated using the intensive integration method from Equation (2).
+The resulting table shows the integrated attributes for the first few target features.
 
-Let the shared length between target $j$ and source $i$ be the variable $SL_{ij}$. The value of an extensive variable $\hat{Y}$ for a target feature $j$, $\hat{Y}_j$, is estimated by summing the contributions from all matching source features $i$. The contribution of each source feature is its value $Y_i$ weighted by the proportion of its length that is shared with the target feature.
+```{r}
+#| label: table-attribute-integration
+#| echo: false
+knitr::kable(
+  head(st_drop_geometry(integrated_sf)),
+  caption = "Target features with integrated attributes.",
+  digits = 2
+)
+```
 
-$$
-\hat{Y}_j = \sum_{i} \frac{SL_{ij}}{\text{length}(i)} \times Y_i
-$$
- 
-
-### Intensive Numeric Attribute Integration
-
-For an intensive variable, the value for a target feature $j$, $\hat{Y}_j$, is estimated as the weighted average of the values from all matching source features. The value of each source feature $Y_i$ is weighted by the proportion of the target feature's length that it shares.
-
-$$
-\hat{Y}_j = \frac{\sum_{i} (SL_{ij} \times Y_i)}{\sum_{i} SL_{ij}}
-$$
- 
-## Integration of Categorical Attributes
-
-A similar approach can be applied to categorical variables. Consider a categorical variable $Y$ with $k$ unique values. For each target feature $j$, a frequency table for each category $Y_k$ is calculated based on the matching source features. New numeric variables are created for each unique category $Y_k$, where the value for a source feature $i$ represents the presence (1) or absence (0) of that category. The extensive and intensive attribute integration methods can then be applied to these new dummy variables. 
-
-
-### Extensive Categorical Attribute Integration 
-
-The estimated value for a category $k$ on a target feature $j$, $\hat{Y}_{jk}$, is the sum of the shared length proportions from all source features that possess that category. $Y_{ik}$ is a binary indicator (1 if source feature $i$ has category $k$, 0 otherwise). This can be interpreted as the total length-weighted "count" of a category transferred to the target feature.
- 
-$$
-\hat{Y}_{jk} = \sum_{i}{\frac{SL_{ij}}{\text{length}(i)}} \times Y_{ik}
-$$
-
-### Intensive Categorical Attribute Integration
-
-The estimated value for a category $k$ on a target feature $j$, $\hat{Y}_{jk}$, is the shared-length weighted average of the presence of that category among source features. This yields the proportion of the matched length of the target feature that corresponds to a specific category.
-
-$$
-\hat{Y}_{jk} = \frac{\sum_{i} (SL_{ij} \times Y_{ik})}{\sum_{i} SL_{ij}}
-$$
- 
-## Adaptability of Approximate Network Matching 
-
-The proposed algorithm is highly flexible. For example, it can match features that have no direct overlap but are within the specified distance tolerance and meet the orientation criteria, which is useful for identifying adjacent or abutting neighbors. The results can also be used to efficiently narrow down a set of candidate matches for subsequent manual verification or processing with more computationally expensive algorithms. Furthermore, the shared overlap metric can be used to implement a binary classification by applying a threshold, if required by the application.
-
-### Sample Data Integration and Testing
-
-The system includes example datasets for testing and demonstration, enabling users to evaluate the algorithm's performance on real-world data. These datasets represent common scenarios in network conflation, including:
-
-- Road networks from different sources (e.g., OpenStreetMap vs. government transportation datasets).
-- Networks with varying levels of detail and generalization.
-- Datasets with different topological representations of the same underlying phenomena.
-
-### Usage Workflow
-
-The primary workflow involves a straightforward process that leverages the system's flexible API:
-
-1.  **Data Loading**: Import source and target linestring datasets using appropriate geospatial data structures.
-2.  **Parameter Configuration**: Set distance and angle tolerance parameters based on data characteristics and matching requirements.
-3.  **Matching Execution**: Call the core `anime()` function with configured geometric tolerance parameters.
-4.  **Result Extraction**: Obtain tabular match results with weighted metrics.
-5.  **Attribute Integration**: Apply extensive or intensive interpolation methods for attribute transfer between matched network features.
-6.  **Analysis and Validation**: Process weighted metrics for network enrichment and quality assessment.
-
-The system supports both extensive (additive) and intensive (average) interpolation methods for attribute transfer between matched network features, providing flexibility for different analytical requirements.
 
 ## Discussion
+
+The case study demonstrates ANIME's ability to successfully match and integrate data between topologically dissimilar networks.
+The results highlight the benefits of the algorithm's quantitative, m:n matching approach over traditional binary classification methods.
+
+### Interpretation of Results
+
+The matching results show that ANIME can identify correspondences even where features are not perfectly aligned, such as the one-to-many relationship shown in @fig-plot-matches.
+The attribute integration demonstrates how data can be transferred in a nuanced way.
+For example, a target feature that overlaps with multiple source roads having different speed limits will receive a weighted average speed limit, which is more realistic than assigning the value from a single, potentially arbitrary, 'best' match.
+Similarly, the proportional representation of categorical attributes provides a richer understanding of the target network's composition.
 
 ### Technical Limitations and Scope
 
 This algorithm operates within specific technical constraints that define its applicability.
 
 **Geometric Constraints:**
-- The algorithm is designed for $\Bbb{R}^2$ Euclidean space and does not currently support 3-dimensional or spherical coordinates. Extending the principles to these domains is conceivable, but presents challenges in defining and calculating overlap regions and lengths.
-- Input geometries must be in the same projected coordinate reference system and be spatially proximal. The algorithm does not perform on-the-fly geometric transformations.
+- The algorithm is designed for $\Bbb{R}^2$ Euclidean space and does not currently support 3-dimensional or spherical coordinates.
+Extending the principles to these domains is conceivable, but presents challenges in defining and calculating overlap regions and lengths.
+- Input geometries must be in the same projected coordinate reference system and be spatially proximal.
+The algorithm does not perform on-the-fly geometric transformations.
 
 **Geometric Transformation Limitations:**
-- The algorithm does not handle systematic geometry shifts or require affine transformations to align datasets (Lei & Lei, 2019). Users must ensure that datasets are properly georeferenced and aligned before applying the matching algorithm.
+- The algorithm does not handle systematic geometry shifts or require affine transformations to align datasets (Lei & Lei, 2019).
+Users must ensure that datasets are properly georeferenced and aligned before applying the matching algorithm.
 - There is no automatic handling of scale differences between datasets, which may require preprocessing for datasets at significantly different scales.
 
 **Performance Considerations:**
