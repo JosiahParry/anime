@@ -839,5 +839,3 @@ ANIME's core contributions represent significant advances in both theoretical fo
 ::: {#refs}
 :::
 
-
-```
