@@ -71,7 +71,6 @@ Network Conflation, Spatial Data Integration, Geometric Matching, Attribute Tran
 - High-performance implementation in Rust with comprehensive R and Python bindings for broad accessibility.
 - Quantitative correspondence measurement using shared length calculations, supporting m:n relationships instead of 1:1 or 1:m relationships.
 - Mathematically grounded extensive and intensive attribute interpolation methods for both numeric and categorical data.
-- Leverages R*-tree spatial indexing with geometric validation criteria for efficient and robust matching at scale.
 
 {{< pagebreak >}}
 
