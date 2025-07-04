@@ -83,7 +83,7 @@ The process of joining attributes between such networks is further complicated b
 Consequently, a weighted approach is necessary to accurately associate attributes during integration.
 As noted by @lei_optimal_2019, "Due to the complexity and limitations of existing methods, planners and analysts often have to employ a heavily manual conflation process, which is time‐consuming and often prohibitively expensive."
 
-The need for robust automated integration methods is growing as vast quantities of geospatial data are derived from sources like remotely sensed imagery [@samal_review_2004] and large-scale feature extraction projects.
+The need for robust automated integration methods is growing as vast quantities of geospatial data are derived from remotely sensed imagery [@samal_review_2004] and large-scale feature extraction projects.
 While features from these sources may not be complete or entirely accurate, they can supplement missing data or reflect recent changes in a primary dataset, such as a master road network.
 Several persistent challenges complicate the matching process: 
 
