@@ -86,7 +86,11 @@ As noted by @lei_optimal_2019, "Due to the complexity and limitations of existin
 
 The need for robust automated integration methods is growing as vast quantities of geospatial data are derived from sources like remotely sensed imagery [@samal_review_2004] and large-scale feature extraction projects.
 While features from these sources may not be complete or entirely accurate, they can supplement missing data or reflect recent changes in a primary dataset, such as a master road network.
-Several persistent challenges complicate the matching process: matching generalized geometry to more detailed representations [@kim_conflation_2017; @mustiere_matching_2008], handling cases where a single real-world feature may be represented differently across datasets (e.g., a multi-lane highway as a single line in one dataset and multiple parallel lines in another [@zhang_methods_nodate]), and managing complex one-to-many or many-to-many correspondence scenarios.
+Several persistent challenges complicate the matching process: 
+
+- matching generalized geometry to more detailed representations [@kim_conflation_2017; @mustiere_matching_2008]
+- different representations of the same feature (e.g., a multi-lane highway as a single line in one dataset and multiple parallel lines in another [@zhang_methods_nodate])
+-  addressing one-to-many or many-to-many correspondence scenarios
 In the absence of reliable semantic information or join keys, a purely geometric approach becomes essential [@samal_review_2004].
 
 The extensive literature on network conflation predominantly frames the problem as binary feature classification, determining whether a source feature matches a target feature based on geometric similarity measures including proximity, orientation (angular similarity), length ratios, and shape similarity metrics such as Fréchet distance, Hausdorff distance, or vertex-based Euclidean measures [@samal_review_2004].
