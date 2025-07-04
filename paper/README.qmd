@@ -78,7 +78,7 @@ Network Conflation, Spatial Data Integration, Geometric Matching, Attribute Tran
 
 A long-standing challenge in spatial data science is the reconciliation of vector linestring datasets.
 Such datasets are used in many fields, including transport planning, which increasingly requires the integration of multiple representations of linear transport networks such as those from different government agencies or commercial providers.
-These datasets often represent the same real-world phenomena but possess different underlying topologies and lack common join keys, precluding straightforward integration.
+These datasets often represent the same real-world phenomena but are topologically different and lack common join keys precluding direct attribute transfer.
 The process of joining attributes between such networks, a critical component of the broader task of **conflation**, is further complicated by the fact that the attributes of one feature (e.g., speed limits, traffic volumes) are intended to be associated with its specific geometry and not transferred in their entirety to another.
 Consequently, a weighted approach is necessary to accurately associate attributes during integration.
 As noted by @lei_optimal_2019, "Due to the complexity and limitations of existing methods, planners and analysts often have to employ a heavily manual conflation process, which is time‐consuming and often prohibitively expensive."
