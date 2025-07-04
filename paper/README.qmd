@@ -326,7 +326,7 @@ ggplot() +
 ```
 
 
-### Overlap Calculation and Shared Length Quantification
+### Overlap calculation and shared length quantification
 
 Once two line segments $A_{ik}$ and $B_{jk}$ are identified as a match, the extent of their overlap is calculated.
 This overlap is defined as the length of the portion of segment $A_{ik}$ that is projected onto the overlapping range of either the x- or y-dimensions of the two segments.
