@@ -51,7 +51,7 @@ quarto::quarto_render("paper/README.qmd")
 # Abstract {.unnumbered}
 
 Reconciling topologically different linestrings is a fundamental challenge in spatial data science, particularly when integrating network datasets from disparate sources.
-Existing methods often struggle with the absence of join keys and the direct transfer of entire attribute sets, which hinders effective data integration and analysis.
+Existing methods can be limiting due to absence of join keys and the requirement of direct transfer of attributes.
 This paper presents ANIME (Approximate Network Integration, Matching and Enrichment), a novel segment-level geometric matching algorithm implemented in a high-performance, open-source Rust library with bindings to R and Python.
 Unlike existing binary classification approaches, ANIME quantifies the degree of correspondence between networks through shared length calculations, enabling robust handling of m:n relationships and complex topological dissimilarities.
 The algorithm leverages R*-tree spatial indexing with angle-based and distance-based filtering criteria, combined with overlap computation methods that adapt to line segment orientation.
