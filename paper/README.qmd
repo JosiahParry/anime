@@ -140,9 +140,6 @@ The ANIME algorithm operates on two sets of linestring features with the formal 
 | Target features              | $B$       | The input `FeatureCollection` to which features are being matched             |
 | Distance Tolerance           | $DT$      | The maximum Euclidean distance for segment matching (in map units)            |
 | Angle Tolerance              | $AT$      | The maximum angle difference (degrees) for parallel segment consideration     |
-| Shared Length                | $SL_{ij}$ | The length of geometric overlap between source feature $i$ and target feature $j$ |
-| Source-weighted proportion   | $sw_{ij}$ | The proportion of source feature $i$ matched to target feature $j$: $SL_{ij} / \text{length}(i)$ |
-| Target-weighted proportion   | $tw_{ij}$ | The proportion of target feature $j$ matched to source feature $i$: $SL_{ij} / \text{length}(j)$ |
 
 : Summary of key variables and parameters {#tbl-variables-parameters}
 
