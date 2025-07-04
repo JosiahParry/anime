@@ -56,7 +56,7 @@ This paper presents ANIME (Approximate Network Integration, Matching and Enrichm
 ANIME quantifies the degree of correspondence between line geometries through shared length calculations, enabling robust handling of m:n relationships and complex topological dissimilarities.
 The algorithm leverages R*-tree spatial indexing with angle-based and distance-based filtering criteria, combined with overlap computation methods that adapt to line segment orientation.
 The algorithm calculates relationship metrics: shared length ($SL_{ij}$), source-weighted proportions ($sw_{ij}$), and target-weighted proportions ($tw_{ij}$), enabling both extensive and intensive interpolation methods for statistically sound attribute transfer.
-Experimental validation demonstrates superior performance in handling generalized-to-detailed geometry matching, one-to-many correspondences, and attribute integration across diverse network types.
+Experimental validation demonstrates fast and memory efficient performance handling generalized-to-detailed geometry matching, one-to-many correspondences, and attribute integration.
 Applications span transport planning, hydrographic conflation, ecological modeling, and infrastructure management, offering a robust foundation for complex geospatial integration tasks requiring weighted aggregations and network subset identification based on shared geometric characteristics.
 
 # Keywords {.unnumbered}
