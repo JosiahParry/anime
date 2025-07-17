@@ -659,12 +659,6 @@ The case study evaluates ANIME's capability across four distinct attribute types
 The source networks exhibit complex geometric representations, with OSM employing separate linestrings for each side of a street and individual lines for cycling pavements and dedicated lanes. In contrast, the target network (OS Open Roads) utilizes simplified geometry, representing each street as a single linestring regardless of lane count or adjacent infrastructure.
 This configuration evaluates ANIME's capacity to handle complex-to-simplified matching across multiple data sources simultaneously, requiring aggregation from detailed geometric representations to generalized network structures: a challenging scenario that traditional conflation approaches struggle to address comprehensively.
 
-The following algorithm parameters were selected for the case study:
-
-- `distance_tolerance` = 15 meters
-- `angle_tolerance` = 5 degrees
-
-
 ## Illustrative Example: ANIME Functionality Demonstration
 
 To demonstrate ANIME's core functionality, this section presents a simple illustrative example demonstrating how the algorithm identifies and quantifies geometric relationships between source and target features.
@@ -738,7 +732,7 @@ integrated_sf <- merge(integrated_sf, intensive_categorical, by = "target_id", a
 
 ```{r}
 #| label: fig-plot-matches
-#| fig-cap: "Example of complex-to-simplified matching. Multiple detailed source features (red, solid) are matched to a single generalized target feature (blue, dashed), with each contributing different amounts of shared length."
+#| fig-cap: "Complex-to-simplified matching example: multiple source features (red, solid) matched to single target feature (blue, dashed) with varying shared lengths. Parameters: distance_tolerance = 2.5m, angle_tolerance = 15°."
 #| echo: false
 i <- 4
 target_feature <- target_sf[i,]
@@ -770,26 +764,7 @@ Building upon this illustrative example, this section presents results from comp
 
 @fig-data-transfer-comparison presents results of comprehensive four-attribute data-transfer comparison conducted using **ANIME** across central Edinburgh. The visualization demonstrates successful transfer and integration of different attribute types utilizing ANIME's quantitative correspondence framework. Each panel illustrates effective handling of distinct data integration challenges: extensive variable aggregation (Go Dutch cycling potential), binary categorical transfer (bus route presence), intensive numeric averaging (bus lane counts), and discrete value interpolation (speed limits). Interactive web maps containing complete Scottish road network outputs for each attribute type can be explored at <https://nptscot.github.io/>.
 
-The ANIME algorithm successfully identified and quantified geometric relationships between multiple source networks and the target OS road network, generating comprehensive correspondence metrics for weighted attribute transfer across all four attribute types.
-The algorithm processed hundreds of source network features across different datasets and thousands of target OS road network features, producing sparse matching matrices containing validated segment pairs for each source-target combination.
-
-The matching process demonstrates ANIME's core strength in quantifying **degrees of correspondence** rather than binary matching decisions across diverse attribute scenarios.
-The resulting sparse matrices detail shared length between every source and target feature pair, wherein each entry represents the geometric extent of overlap between specific features.
-This quantitative approach enables ANIME to handle complex scenarios including: n:1 aggregation for cycling potential values, proportional categorical transfer for bus route presence, weighted averaging for bus lane counts, and discrete value interpolation for speed limits.
-
-The shared length results from the ANIME matching algorithm enable statistically rigorous attribute transfer utilizing both extensive and intensive interpolation methods across all four attribute types.
-The comprehensive evaluation successfully integrated: `go_dutch_cycling` (extensive variable), `bus_route_presence` (binary categorical), `bus_lane_count` (intensive numeric variable), and `speed_limit` (discrete numeric variable).
-
-**Extensive Variable Integration:** Go Dutch cycling potential values were aggregated utilizing length-weighted summation (@eq-extensive), wherein total cycling capacity for each target feature represents the sum of contributions from all matched source features, weighted by geometric overlap. This approach appropriately handles the additive nature of flow volumes across network segments.
-
-**Intensive Numeric Integration:** Bus lane counts and speed limit values for target features were calculated as shared-length weighted averages from all matching source features, following @eq-intensive. This approach ensures proportional contribution of each source feature relative to its geometric overlap with the target, maintaining spatial accuracy for variables representing properties per unit length.
-
-**Binary Categorical Integration:** Bus route presence indicators were converted to proportional representations utilizing the intensive method. The resulting proportions indicate the fraction of each target feature's length corresponding to bus routes, enabling nuanced representation of segments partially serving bus transportation.
-
-**Discrete Value Handling:** Speed limit integration demonstrates ANIME's capability to handle discrete numerical values through weighted averaging, producing realistic interpolated values reflecting the geometric distribution of different speed zones along target features.
-
-The integrated results demonstrate ANIME's capability to maintain statistical rigor while handling diverse data types through mathematically sound weighted aggregation methods, providing comprehensive foundation for multi-attribute network integration scenarios.
-
+As shown in @fig-data-transfer-comparison, the ANIME algorithm successfully and accurately transferred and integrated different attribute types between the source networks and the target OS road network. The matching process demonstrates ANIME's core strength in quantifying **degrees of correspondence** rather than binary matching decisions across diverse attribute scenarios, enabling the algorithm to handle complex scenarios including: n:1 aggregation for cycling potential values, proportional categorical transfer for bus route presence, weighted averaging for bus lane counts, and discrete value interpolation for speed limits. 
 
 
 # Discussion
