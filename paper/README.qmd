@@ -659,7 +659,7 @@ The case study evaluates ANIME's capability across four distinct attribute types
 The source networks exhibit complex geometric representations, with OSM employing separate linestrings for each side of a street and individual lines for cycling pavements and dedicated lanes. In contrast, the target network (OS Open Roads) utilizes simplified geometry, representing each street as a single linestring regardless of lane count or adjacent infrastructure.
 This configuration evaluates ANIME's capacity to handle complex-to-simplified matching across multiple data sources simultaneously, requiring aggregation from detailed geometric representations to generalized network structures: a challenging scenario that traditional conflation approaches struggle to address comprehensively.
 
-## Illustrative Example: ANIME Functionality Demonstration
+## Illustrative example: ANIME functionality demonstration
 
 To demonstrate ANIME's core functionality, this section presents a simple illustrative example demonstrating how the algorithm identifies and quantifies geometric relationships between source and target features.
 
@@ -756,7 +756,7 @@ knitr::kable(
 )
 ```
 
-## National-Scale Results: Comprehensive Four-Attribute Integration
+## National-scale results: Comprehensive four-attribute integration
 
 Building upon this illustrative example, this section presents results from comprehensive national-scale analysis demonstrating ANIME's capability across four distinct attribute types. For comparison purposes, only the city centre of Edinburgh is shown below.
 
@@ -781,7 +781,7 @@ This enables nuanced decision-making regarding match quality and provides mathem
 **Weighted Attribute Integration**: The successful transfer of both numeric (speed_limit) and categorical (road_type) attributes demonstrates practical utility of ANIME's extensive and intensive interpolation methods.
 The algorithm maintains statistical rigor by appropriately weighting contributions based on geometric correspondence, ensuring that attribute values reflect spatial extent of matching relationships.
 
-## Applications and Use Cases
+## Applications and use cases
 
 The flexibility of ANIME enables diverse applications across spatial data science domains.
 
@@ -810,7 +810,7 @@ The flexibility of ANIME enables diverse applications across spatial data scienc
 - Integration of sensor networks with physical infrastructure representations
 
 
-## Future Development Directions
+## Future development directions
 
 Future work could extend the capabilities of the algorithm in several key areas.
 
