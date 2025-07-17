@@ -643,341 +643,31 @@ This architecture ensures that users in both ecosystems can benefit from the per
 
 # Case Study
 
-```{r}
-#| label: setup-case-study
-#| include: false
-suppressMessages(library(sf))
-suppressMessages(library(dplyr))
-suppressMessages(library(ggplot2))
+This section demonstrates ANIME's practical application and scalability through a comprehensive case study utilizing multiple national transportation datasets.
+The experimental design involves matching diverse source networks from the NPTScot (Network Planning Tool Scotland) project and OpenStreetMap (OSM) to the Ordnance Survey (OS) Open Road network (target), representing a realistic large-scale multi-source conflation scenario characteristic of national transport planning applications.
 
-os_networks = sf::read_sf("paper/os_networks.gpkg")
-NPT = sf::read_sf("paper/NPT.gpkg")
-osm_bus_route = sf::read_sf("paper/osm_bus_route.gpkg")
-osm_bus = sf::read_sf("paper/osm_bus.gpkg")
+The case study evaluates ANIME's capability across four distinct attribute types that collectively demonstrate the algorithm's versatility in diverse data integration scenarios:
 
-zone = zonebuilder::zb_zone("Edinburgh", n_circles = 1) |> sf::st_transform(crs = 27700)
-os_networks_zone = sf::st_intersection(os_networks, zone)
-os_networks_anime_zone = sf::st_intersection(os_networks, zone)
-NPT_zone = sf::st_intersection(NPT, zone)
-osm_bus_route_zone = sf::st_intersection(osm_bus_route, zone)
-osm_bus_zone = sf::st_intersection(osm_bus, zone)
+1. **Go Dutch cycling potential (extensive variable)**: Cycling flow volumes from the NPT project under a hypothetical policy scenario, evaluating ANIME's capacity to aggregate values from multiple source features to single target features (n:1 relationships) through length-weighted summation.
 
-# Create comparison plots showing data transfer from source to target datasets
-# =============================================================================
+2. **Bus route presence (binary categorical)**: Binary indicators from OSM data identifying road segments serving as bus routes, examining ANIME's capability to transfer categorical data and compute proportional representations for mixed-category target features.
 
-# Define color schemes
-# ---------------------
-# Custom cycling demand gradient colors
-custom_colors <- c("#808080", "#FFFF00", "#00FF00", "#00FFFF", "#0000FF", "#8000FF", "#0000A0", "#FF00FF")
-custom_breaks <- c(1, 50, 100, 250, 500, 1000, 2000, 3000)
+3. **Number of bus lanes (intensive numeric)**: Counts of dedicated bus lanes per road segment from OSM data, assessing ANIME's capacity to compute length-weighted averages when transferring mean values from multiple source features to single target features (n:1 relationships).
 
-# Bus route colors
-bus_route_colors <- c("No" = "lightgray", "Yes" = "#0000FF")
+4. **Speed limit (discrete numeric)**: Posted speed limits from OSM data, evaluating ANIME's capability to handle discrete numerical values and compute appropriate weighted averages for target features.
 
-# Bus lane colors
-bus_lane_colors <- c("0" = "gray70", "1" = "blue", "2" = "red")
+The source networks exhibit complex geometric representations, with OSM employing separate linestrings for each side of a street and individual lines for cycling pavements and dedicated lanes. In contrast, the target network (OS Open Roads) utilizes simplified geometry, representing each street as a single linestring regardless of lane count or adjacent infrastructure.
+This configuration evaluates ANIME's capacity to handle complex-to-simplified matching across multiple data sources simultaneously, requiring aggregation from detailed geometric representations to generalized network structures: a challenging scenario that traditional conflation approaches struggle to address comprehensively.
 
-# Speed limit colors
-speed_colors <- c("20" = "#00FF00", "30" = "blue", "40" = "magenta", "40+" = "#FF0000")
+The following algorithm parameters were selected for the case study:
 
-# Helper function to categorize bus lanes consistently
-categorize_bus_lanes <- function(count_column) {
-  case_when(
-    count_column == 0 ~ "0",
-    count_column >= 0.09 & count_column < 1.95 ~ "1",
-    count_column >= 1.95 ~ "2", 
-    TRUE ~ "0"
-  )
-}
+- `distance_tolerance` = 15 meters
+- `angle_tolerance` = 5 degrees
 
-# Data preparation
-# ----------------
 
-# 1. Prepare bus route data (convert to yes/no)
-os_networks_bus_routes <- os_networks_anime_zone %>%
-  mutate(
-    bus_route_yn = case_when(
-      is.na(bus_route) ~ "No",
-      bus_route > 0.01 ~ "Yes",
-      TRUE ~ "No"
-    ),
-    bus_route_yn = factor(bus_route_yn, levels = c("No", "Yes"))
-  )
+## Illustrative Example: ANIME Functionality Demonstration
 
-osm_bus_routes_source <- osm_bus_route %>%
-  sf::st_filter(zone) %>%
-  mutate(
-    route_yn = case_when(
-      is.na(route_numerical) ~ NA_character_,
-      route_numerical > 0 ~ "Yes",
-      TRUE ~ "No"
-    ),
-    route_yn = factor(route_yn, levels = c("No", "Yes"))
-  )
-
-# 2. Prepare bus lanes data (consistent categorization)
-os_networks_bus_lanes <- os_networks_anime_zone %>%
-  filter(!is.na(number_of_bus_lanes)) %>%
-  mutate(
-    bus_lanes_count = pmax(0, number_of_bus_lanes, na.rm = TRUE),
-    bus_lanes_category = categorize_bus_lanes(bus_lanes_count),
-    bus_lanes_category = factor(bus_lanes_category, levels = c("0", "1", "2"))
-  )
-# mapview(os_networks_anime_zone, zcol = "number_of_bus_lanes")
-osm_bus_lanes_source <- osm_bus_zone %>%
-  filter(!is.na(n_bus_lanes)) %>%
-  mutate(
-    bus_lanes_count = pmax(0, n_bus_lanes, na.rm = TRUE),
-    bus_lanes_category = categorize_bus_lanes(bus_lanes_count),
-    bus_lanes_category = factor(bus_lanes_category, levels = c("0", "1", "2"))
-  )
-
-# 3. Prepare speed data (consistent categorization)
-os_networks_speed <- os_networks_anime_zone %>%
-  filter(!is.na(maxspeed_numeric)) %>%
-  mutate(
-    speed_category = case_when(
-      maxspeed_numeric <= 20 ~ "20",
-      maxspeed_numeric <= 30 ~ "30", 
-      maxspeed_numeric <= 40 ~ "40",
-      maxspeed_numeric > 40 ~ "40+",
-      TRUE ~ "Unknown"
-    ),
-    speed_category = factor(speed_category, levels = c("20", "30", "40", "40+"))
-  )
-
-# Add dummy data to ensure all speed categories appear in the plot
-if (nrow(os_networks_speed) > 0) {
-  # Create dummy geometries (tiny points that won't be visible)
-  dummy_point <- st_point(c(0, 0)) %>% st_sfc(crs = st_crs(os_networks_speed))
-  dummy_line <- st_linestring(matrix(c(0, 0, 0.001, 0.001), ncol = 2)) %>% 
-    st_sfc(crs = st_crs(os_networks_speed))
-  
-  # Check which categories are missing and add dummy data for them
-  existing_categories <- unique(os_networks_speed$speed_category)
-  missing_categories <- setdiff(c("20", "30", "40", "40+"), existing_categories)
-  
-  if (length(missing_categories) > 0) {
-    dummy_rows <- data.frame(
-      speed_category = factor(missing_categories, levels = c("20", "30", "40", "40+"))
-    ) %>%
-      st_sf(geometry = rep(dummy_line, length(missing_categories)))
-    
-    os_networks_speed <- rbind(os_networks_speed, dummy_rows)
-  }
-}
-# mapview(os_networks_speed, zcol = "speed_category")
-osm_speed_source <- osm_bus_zone %>%
-  filter(!is.na(maxspeed_numeric)) %>%
-  mutate(
-    speed_category = case_when(
-      maxspeed_numeric <= 20 ~ "20",
-      maxspeed_numeric <= 30 ~ "30",
-      maxspeed_numeric <= 40 ~ "40", 
-      maxspeed_numeric > 40 ~ "40+",
-      TRUE ~ "Unknown"
-    ),
-    speed_category = factor(speed_category, levels = c("20", "30", "40", "40+"))
-  )
-
-# Add dummy data to ensure all speed categories appear in the plot
-if (nrow(osm_speed_source) > 0) {
-  # Create dummy geometries (tiny points that won't be visible)
-  dummy_line <- st_linestring(matrix(c(0, 0, 0.001, 0.001), ncol = 2)) %>% 
-    st_sfc(crs = st_crs(osm_speed_source))
-  
-  # Check which categories are missing and add dummy data for them
-  existing_categories <- unique(osm_speed_source$speed_category)
-  missing_categories <- setdiff(c("20", "30", "40", "40+"), existing_categories)
-  
-  if (length(missing_categories) > 0) {
-    dummy_rows <- data.frame(
-      speed_category = factor(missing_categories, levels = c("20", "30", "40", "40+"))
-    ) %>%
-      st_sf(geometry = rep(dummy_line, length(missing_categories)))
-    
-    osm_speed_source <- rbind(osm_speed_source, dummy_rows)
-  }
-}
-
-# -----------------------------------------------------------------
-# 1. Identify the missing classes
-# -----------------------------------------------------------------
-wanted_classes   <- c("20", "30", "40", "40+")
-present_classes  <- unique(os_networks_speed$speed_category)
-missing_classes  <- setdiff(wanted_classes, present_classes)
-
-if (length(missing_classes) > 0) {
-
-  # -----------------------------------------------------------------
-  # 2. Make sure the factor has the full set of levels
-  # -----------------------------------------------------------------
-  os_networks_speed$speed_category <- factor(
-    os_networks_speed$speed_category,
-    levels = wanted_classes        # guarantees correct legend order
-  )
-
-  # -----------------------------------------------------------------
-  # 3. Build tiny dummy line strings – one for each missing class
-  # -----------------------------------------------------------------
-  dummy_lines <- lapply(seq_along(missing_classes), function(i) {
-    # Two points ≈1 m apart in EPSG:27700
-    st_linestring(matrix(c(0 + i*1, 0, 0 + i*1, 1), ncol = 2, byrow = TRUE))
-  }) |> st_sfc(crs = st_crs(os_networks_speed))
-
-  dummy_sf <- st_sf(
-    speed_category = factor(missing_classes, levels = wanted_classes),
-    geometry       = dummy_lines
-  )
-
-  # -----------------------------------------------------------------
-  # 4. Append the dummies to the real data
-  # -----------------------------------------------------------------
-  os_networks_speed <- bind_rows(os_networks_speed, dummy_sf)
-}
-
-# Create plots
-# ------------
-
-# Plot 1: Cycling demand (NPT Go Dutch → OS Networks)
-p1_source <- ggplot(NPT_zone %>% arrange(all_fastest_bicycle_go_dutch)) +
-  geom_sf(aes(color = all_fastest_bicycle_go_dutch), size = 0.8) +
-  scale_color_gradientn(
-    name = "Cycling\nDemand",
-    colors = custom_colors,
-    values = scales::rescale(log10(custom_breaks)),
-    trans = "log10",
-    na.value = "gray90"
-  ) +
-  labs(title = "Source: NPT Go Dutch Data") +
-  theme_void() +
-  theme(legend.position = "none")
-
-p1_target <- ggplot(os_networks_anime_zone %>% arrange(go_dutch)) +
-  geom_sf(aes(color = go_dutch), size = 0.8) +
-  scale_color_gradientn(
-    name = "Cycling\nDemand",
-    colors = custom_colors,
-    values = scales::rescale(log10(custom_breaks)),
-    trans = "log10",
-    na.value = "gray90"
-  ) +
-  labs(title = "Target: OS Networks") +
-  theme_void() +
-  theme(legend.position = c(1.1, 0.5))
-
-# Plot 2: Bus routes (OSM Bus Routes → OS Networks)
-p2_source <- ggplot(osm_bus_routes_source %>% arrange(route_yn)) +
-  geom_sf(aes(color = route_yn), size = 0.8) +
-  scale_color_manual(
-    name = "Bus Route",
-    values = bus_route_colors,
-    labels = c("No", "Yes"),
-    na.translate = FALSE
-  ) +
-  labs(title = "Source: OSM Bus Routes Data") +
-  theme_void() +
-  theme(legend.position = "none")
-
-p2_target <- ggplot(os_networks_bus_routes %>% arrange(bus_route_yn)) +
-  geom_sf(aes(color = bus_route_yn), size = 0.8) +
-  scale_color_manual(
-    name = "Bus Route",
-    values = bus_route_colors,
-    labels = c("No", "Yes"),
-    na.translate = FALSE
-  ) +
-  labs(title = "Target: OS Networks") +
-  theme_void() +
-  theme(legend.position = c(1.1, 0.5))
-
-# Plot 3: Bus lanes (OSM Bus Lanes → OS Networks)
-p3_source <- ggplot(osm_bus_lanes_source %>% arrange(bus_lanes_category)) +
-  geom_sf(aes(color = bus_lanes_category), size = 0.8) +
-  scale_color_manual(
-    name = "Number of\nBus Lanes",
-    values = bus_lane_colors,
-    labels = c("0", "1", "2"),
-    na.value = "gray90",
-    drop = FALSE
-  ) +
-  labs(title = "Source: OSM Bus Lanes") +
-  theme_void() +
-  theme(legend.position = "none")
-
-p3_target <- ggplot(os_networks_bus_lanes %>% arrange(bus_lanes_category)) +
-  geom_sf(aes(color = bus_lanes_category), size = 0.8) +
-  scale_color_manual(
-    name = "Number of\nBus Lanes",
-    values = bus_lane_colors,
-    labels = c("0", "1", "2"),
-    na.value = "gray90",
-    drop = FALSE
-  ) +
-  labs(title = "Target: OS Networks") +
-  theme_void() +
-  theme(legend.position = c(1.1, 0.5))
-
-# Plot 4: Speed limits (OSM Speed Data → OS Networks)
-p4_source <- ggplot(osm_speed_source %>% arrange(speed_category)) +
-  geom_sf(aes(color = speed_category), size = 0.8) +
-  scale_color_manual(
-    name = "Speed\n(mph)",
-    values = speed_colors,
-    labels = c("20", "30", "40", "40+"),
-    na.value = "gray90",
-    drop = FALSE
-  ) +
-  labs(title = "Source: OSM Speed Limits Data") +
-  theme_void() +
-  theme(legend.position = "none")
-
-p4_target <- ggplot(os_networks_speed %>% arrange(speed_category)) +
-  geom_sf(aes(color = speed_category), size = 0.8) +
-  scale_color_manual(
-    name = "Speed\n(mph)",
-    values = speed_colors,
-    labels = c("≤20", "≤30", "≤40", ">40"),
-    na.value = "gray90",
-    drop = FALSE
-  ) +
-  labs(title = "Target: OS Networks") +
-  theme_void() +
-  theme(legend.position = c(1.1, 0.5))
-
-# Combine all plots using patchwork
-# ---------------------------------
-# Layout: Source datasets on left, Target (OS Networks) on right
-comparison_plot <- (p1_source | p1_target) / 
-                   (p2_source | p2_target) / 
-                   (p3_source | p3_target) /
-                   (p4_source | p4_target)
-
-# Display and save the plot
-print(comparison_plot)
-
-# Save the plot
-ggsave("output/data_transfer_comparison_plot.png", comparison_plot, 
-       width = 16, height = 20, dpi = 300, bg = "white")
-
-ggsave("output/data_transfer_comparison_plot.pdf", comparison_plot, 
-       width = 16, height = 20, bg = "white")
-
-cat("Comparison plot saved to output/data_transfer_comparison_plot.png and .pdf\n")
-```
-
-This section demonstrates ANIME's practical application through a comprehensive case study using real-world transportation network data from the NPTScot (Network Planning Tool Scotland) project.
-The experiment matches a simplified linear road network (source) to a more detailed, topologically complex network (target), representing a common scenario in transport planning where generalized route networks must be conflated with detailed infrastructure datasets.
-
-The source network consists of simplified linear features representing cycle routes, while the target network contains detailed road geometries with higher vertex density and more complex topological structures.
-This configuration tests ANIME's ability to handle generalized-to-detailed matching, a challenging scenario for traditional conflation approaches.
-
-Algorithm parameters were selected based on the expected geometric discrepancies between datasets:
-
-- `distance_tolerance` = 15 meters: Accommodates minor positional differences due to different data collection methods and coordinate precision
-- `angle_tolerance` = 25 degrees: Allows for slight orientation variations while maintaining sufficient selectivity to prevent false matches
-
-This parameter configuration represents a balanced approach suitable for urban network conflation tasks where moderate geometric variations are expected.
+To demonstrate ANIME's core functionality, this section presents a simple illustrative example demonstrating how the algorithm identifies and quantifies geometric relationships between source and target features.
 
 ```{r}
 #| label: setup-case-study
@@ -1044,26 +734,11 @@ integrated_sf <- merge(target_sf, intensive_numeric, by = "target_id", all.x = T
 integrated_sf <- merge(integrated_sf, intensive_categorical, by = "target_id", all.x = TRUE)
 ```
 
-
-The ANIME algorithm successfully identified and quantified geometric relationships between the source and target networks, generating comprehensive correspondence metrics for weighted attribute transfer.
-The algorithm processed 47 source network features and 23 target network features, producing a sparse matching matrix with 132 validated segment pairs.
-
-The matching process demonstrates ANIME's core strength in quantifying **degrees of correspondence** rather than binary matching decisions.
-The resulting sparse matrix details the shared length between every source and target feature pair, where each entry represents the geometric extent of overlap between specific features.
-@fig-plot-matches illustrates a representative one-to-many correspondence, where a single target feature matches multiple source features with different overlap magnitudes, highlighting ANIME's sophisticated handling of complex geometric relationships.
-
-```{r}
-#| label: table-match-results
-#| echo: false
-knitr::kable(
-  head(match_df),
-  caption = "Sample of matched pairs with shared length."
-)
-```
+@fig-plot-matches illustrates ANIME's approach to complex-to-simplified geometric matching, wherein multiple detailed source features (red, solid lines) are matched to a single generalized target feature (blue, dashed line). Each source feature contributes varying amounts of shared length to the target, demonstrating ANIME's quantitative correspondence measurement approach rather than binary matching decisions. This many-to-one scenario represents typical conditions when conflating detailed OSM geometries with simplified reference networks.
 
 ```{r}
 #| label: fig-plot-matches
-#| fig-cap: "Example of a one-to-many match. One target feature (blue, dashed) is matched with multiple source features (red, solid)."
+#| fig-cap: "Example of complex-to-simplified matching. Multiple detailed source features (red, solid) are matched to a single generalized target feature (blue, dashed), with each contributing different amounts of shared length."
 #| echo: false
 i <- 4
 target_feature <- target_sf[i,]
@@ -1073,97 +748,114 @@ source_features <- source_sf[source_indices,]
 ggplot() +
   geom_sf(data = source_features, color = "red", linewidth = 1) +
   geom_sf(data = target_feature, linetype = "dashed", color = "blue", linewidth = 1.2) +
-  labs(title = "One-to-Many Match Example") +
   theme_void()
-
 ```
 
-The shared length results from the ANIME matching algorithm enable statistically rigorous attribute transfer using intensive interpolation methods.
-Two attribute types were successfully integrated: `speed_limit` (numeric intensive variable) and `road_type` (categorical variable converted to proportional representation).
-
-**Numeric Attribute Transfer:** Speed limit values for target features were calculated as shared-length weighted averages from all matching source features, following @eq-intensive.
-This approach ensures that the contribution of each source feature is proportional to its geometric overlap with the target, maintaining spatial accuracy in the transferred attributes.
-
-**Categorical Attribute Integration:** Road type categories were converted to dummy variables and integrated using the intensive method, yielding proportional representations for each target feature.
-The resulting proportions indicate the fraction of each target feature's length corresponding to specific road categories, enabling nuanced representation of mixed-category features.
-
-The integrated results demonstrate ANIME's capability to maintain statistical rigor while handling both continuous and categorical data through mathematically sound weighted aggregation methods.
+The underlying data structure produced by ANIME contains detailed correspondence information for every matched pair. @tbl-match-results presents a sample of the matching output, wherein each row represents a source-target pair with its corresponding shared length ($SL_{ij}$). This quantitative foundation enables robust weighted attribute transfer utilizing the mathematical methods described in Section 2.3.
 
 ```{r}
-#| label: table-attribute-integration
+#| label: tbl-match-results
 #| echo: false
 knitr::kable(
-  head(st_drop_geometry(integrated_sf)),
-  caption = "Target features with integrated attributes.",
-  digits = 2
+  head(match_df),
+  caption = "Sample of matched pairs with shared length."
 )
 ```
+
+## National-Scale Results: Comprehensive Four-Attribute Integration
+
+Building upon this illustrative example, this section presents results from comprehensive national-scale analysis demonstrating ANIME's capability across four distinct attribute types. For comparison purposes, only the city centre of Edinburgh is shown below.
+
+![Data transfer comparison in central Edinburgh](assets/data_transfer_comparison_plot.png){#fig-data-transfer-comparison}
+
+@fig-data-transfer-comparison presents results of comprehensive four-attribute data-transfer comparison conducted using **ANIME** across central Edinburgh. The visualization demonstrates successful transfer and integration of different attribute types utilizing ANIME's quantitative correspondence framework. Each panel illustrates effective handling of distinct data integration challenges: extensive variable aggregation (Go Dutch cycling potential), binary categorical transfer (bus route presence), intensive numeric averaging (bus lane counts), and discrete value interpolation (speed limits). Interactive web maps containing complete Scottish road network outputs for each attribute type can be explored at <https://nptscot.github.io/>.
+
+The ANIME algorithm successfully identified and quantified geometric relationships between multiple source networks and the target OS road network, generating comprehensive correspondence metrics for weighted attribute transfer across all four attribute types.
+The algorithm processed hundreds of source network features across different datasets and thousands of target OS road network features, producing sparse matching matrices containing validated segment pairs for each source-target combination.
+
+The matching process demonstrates ANIME's core strength in quantifying **degrees of correspondence** rather than binary matching decisions across diverse attribute scenarios.
+The resulting sparse matrices detail shared length between every source and target feature pair, wherein each entry represents the geometric extent of overlap between specific features.
+This quantitative approach enables ANIME to handle complex scenarios including: n:1 aggregation for cycling potential values, proportional categorical transfer for bus route presence, weighted averaging for bus lane counts, and discrete value interpolation for speed limits.
+
+The shared length results from the ANIME matching algorithm enable statistically rigorous attribute transfer utilizing both extensive and intensive interpolation methods across all four attribute types.
+The comprehensive evaluation successfully integrated: `go_dutch_cycling` (extensive variable), `bus_route_presence` (binary categorical), `bus_lane_count` (intensive numeric variable), and `speed_limit` (discrete numeric variable).
+
+**Extensive Variable Integration:** Go Dutch cycling potential values were aggregated utilizing length-weighted summation (@eq-extensive), wherein total cycling capacity for each target feature represents the sum of contributions from all matched source features, weighted by geometric overlap. This approach appropriately handles the additive nature of flow volumes across network segments.
+
+**Intensive Numeric Integration:** Bus lane counts and speed limit values for target features were calculated as shared-length weighted averages from all matching source features, following @eq-intensive. This approach ensures proportional contribution of each source feature relative to its geometric overlap with the target, maintaining spatial accuracy for variables representing properties per unit length.
+
+**Binary Categorical Integration:** Bus route presence indicators were converted to proportional representations utilizing the intensive method. The resulting proportions indicate the fraction of each target feature's length corresponding to bus routes, enabling nuanced representation of segments partially serving bus transportation.
+
+**Discrete Value Handling:** Speed limit integration demonstrates ANIME's capability to handle discrete numerical values through weighted averaging, producing realistic interpolated values reflecting the geometric distribution of different speed zones along target features.
+
+The integrated results demonstrate ANIME's capability to maintain statistical rigor while handling diverse data types through mathematically sound weighted aggregation methods, providing comprehensive foundation for multi-attribute network integration scenarios.
+
 
 
 # Discussion
 
 The case study results demonstrate ANIME's effectiveness in addressing key limitations of existing network conflation approaches.
-The algorithm successfully identified and quantified complex geometric relationships between topologically dissimilar networks, generating comprehensive weighted correspondence metrics that enable statistically sound attribute transfer. The following sections highlight the key algorithmic strengths demonstrated:
+The algorithm successfully identified and quantified complex geometric relationships between topologically dissimilar networks, generating comprehensive weighted correspondence metrics that enable statistically sound attribute transfer. The following analysis highlights key algorithmic strengths demonstrated:
 
-**M:N Relationship Handling**: The results show ANIME's robust handling of one-to-many and many-to-one correspondences, where single features in one network match multiple features in another.
-This capability is essential for real-world conflation scenarios where network representations differ in geometric complexity and feature granularity.
+**M:N Relationship Handling**: The results demonstrate ANIME's robust handling of one-to-many and many-to-one correspondences, wherein single features in one network match multiple features in another.
+This capability proves essential for real-world conflation scenarios where network representations differ in geometric complexity and feature granularity.
 
-**Quantitative Correspondence Assessment**: Unlike binary matching approaches, ANIME quantifies the precise degree of overlap between network features through shared length calculations.
-This enables nuanced decision-making about match quality and provides a mathematical foundation for weighted attribute integration.
+**Quantitative Correspondence Assessment**: Unlike binary matching approaches, ANIME quantifies precise degrees of overlap between network features through shared length calculations.
+This enables nuanced decision-making regarding match quality and provides mathematical foundation for weighted attribute integration.
 
-**Weighted Attribute Integration**: The successful transfer of both numeric (speed_limit) and categorical (road_type) attributes demonstrates the practical utility of ANIME's extensive and intensive interpolation methods.
-The algorithm maintains statistical rigor by properly weighting contributions based on geometric correspondence, ensuring that attribute values reflect the spatial extent of matching relationships.
+**Weighted Attribute Integration**: The successful transfer of both numeric (speed_limit) and categorical (road_type) attributes demonstrates practical utility of ANIME's extensive and intensive interpolation methods.
+The algorithm maintains statistical rigor by appropriately weighting contributions based on geometric correspondence, ensuring that attribute values reflect spatial extent of matching relationships.
 
-## Applications and use cases
+## Applications and Use Cases
 
 The flexibility of ANIME enables diverse applications across spatial data science domains.
 
 **Transport Planning:**
 
-- Integration of road networks from multiple sources for comprehensive transportation analysis.
-- Conflation of historical and current road datasets for temporal analysis.
-- Matching of planned versus existing infrastructure for impact assessment.
+- Integration of road networks from multiple sources for comprehensive transportation analysis
+- Conflation of historical and current road datasets for temporal analysis
+- Matching of planned versus existing infrastructure for impact assessment
 
 **River Network Analysis:**
 
-- Reconciliation of hydrographic datasets from different mapping agencies.
-- Integration of modeled and observed stream networks for ecological studies.
-- Conflation of networks at different scales for multi-resolution analysis.
+- Reconciliation of hydrographic datasets from different mapping agencies
+- Integration of modeled and observed stream networks for ecological studies
+- Conflation of networks at different scales for multi-resolution analysis
 
 **Ecological Modeling:**
 
-- Matching of habitat corridors from different data sources.
-- Integration of species movement pathways with landscape features.
-- Conflation of ecological networks for conservation planning.
+- Matching of habitat corridors from different data sources
+- Integration of species movement pathways with landscape features
+- Conflation of ecological networks for conservation planning
 
 **Infrastructure Management:**
 
-- Utility network integration for comprehensive asset management.
-- Conflation of as-built versus design datasets for infrastructure monitoring.
-- Integration of sensor networks with physical infrastructure representations.
+- Utility network integration for comprehensive asset management
+- Conflation of as-built versus design datasets for infrastructure monitoring
+- Integration of sensor networks with physical infrastructure representations
 
 
-## Future development directions
+## Future Development Directions
 
 Future work could extend the capabilities of the algorithm in several key areas.
 
 **3D and Spherical Extensions:**
 
-- Extension to 3-dimensional coordinate systems to incorporate elevation data.
-- Development of spherical geometry support for global-scale network analysis.
-- Integration with 3D city models and Building Information Modeling (BIM) systems.
+- Extension to three-dimensional coordinate systems incorporating elevation data
+- Development of spherical geometry support for global-scale network analysis
+- Integration with 3D city models and Building Information Modeling (BIM) systems
 
 **Enhanced Geometric Processing:**
 
-- Implementation of additional shape similarity measures beyond angle-based matching.
-- Support for curved linestring matching using advanced geometric algorithms.
-- Integration of topology-aware matching for complex network structures.
+- Implementation of additional shape similarity measures beyond angle-based matching
+- Support for curved linestring matching utilizing advanced geometric algorithms
+- Integration of topology-aware matching for complex network structures
 
 **Performance Optimization:**
 
-- Parallel processing capabilities for large-scale network conflation.
-- Streaming algorithms for processing networks that exceed available memory.
-- GPU acceleration for computationally intensive geometric operations.
+- Parallel processing capabilities for large-scale network conflation
+- Streaming algorithms for processing networks exceeding available memory
+- GPU acceleration for computationally intensive geometric operations
 
 # Conclusion
 
