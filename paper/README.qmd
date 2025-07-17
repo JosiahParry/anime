@@ -760,7 +760,7 @@ knitr::kable(
 
 Building upon this illustrative example, this section presents results from comprehensive national-scale analysis demonstrating ANIME's capability across four distinct attribute types. For comparison purposes, only the city centre of Edinburgh is shown below.
 
-![Data transfer comparison in central Edinburgh](assets/data_transfer_comparison_plot.png){#fig-data-transfer-comparison}
+![Data transfer comparison in central Edinburgh (Parameters: distance_tolerance = 15m, angle_tolerance = 5°)](assets/data_transfer_comparison_plot.png){#fig-data-transfer-comparison}
 
 @fig-data-transfer-comparison presents results of comprehensive four-attribute data-transfer comparison conducted using **ANIME** across central Edinburgh. The visualization demonstrates successful transfer and integration of different attribute types utilizing ANIME's quantitative correspondence framework. Each panel illustrates effective handling of distinct data integration challenges: extensive variable aggregation (Go Dutch cycling potential), binary categorical transfer (bus route presence), intensive numeric averaging (bus lane counts), and discrete value interpolation (speed limits). Interactive web maps containing complete Scottish road network outputs for each attribute type can be explored at <https://nptscot.github.io/>.
 
