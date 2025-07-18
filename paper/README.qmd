@@ -643,18 +643,25 @@ This architecture ensures that users in both ecosystems can benefit from the per
 
 # Case Study
 
-This section demonstrates ANIME's practical application through a comprehensive case study using real-world transportation network data from the NPTScot (Network Planning Tool Scotland) project.
-The experiment matches a simplified linear road network (source) to a more detailed, topologically complex network (target), representing a common scenario in transport planning where generalized route networks must be conflated with detailed infrastructure datasets.
+This section demonstrates ANIME's practical application and scalability through a comprehensive case study utilizing multiple national transportation datasets.
+The experimental design involves matching diverse source networks from the NPTScot (Network Planning Tool Scotland) project and OpenStreetMap (OSM) to the Ordnance Survey (OS) Open Road network (target), representing a realistic large-scale multi-source conflation scenario characteristic of national transport planning applications.
 
-The source network consists of simplified linear features representing cycle routes, while the target network contains detailed road geometries with higher vertex density and more complex topological structures.
-This configuration tests ANIME's ability to handle generalized-to-detailed matching, a challenging scenario for traditional conflation approaches.
+The case study evaluates ANIME's capability across four distinct attribute types that collectively demonstrate the algorithm's versatility in diverse data integration scenarios:
 
-Algorithm parameters were selected based on the expected geometric discrepancies between datasets:
+1. **Go Dutch cycling potential (extensive variable)**: Cycling flow volumes from the NPT project under a hypothetical policy scenario, evaluating ANIME's capacity to aggregate values from multiple source features to single target features (n:1 relationships) through length-weighted summation.
 
-- `distance_tolerance` = 15 meters: Accommodates minor positional differences due to different data collection methods and coordinate precision
-- `angle_tolerance` = 25 degrees: Allows for slight orientation variations while maintaining sufficient selectivity to prevent false matches
+2. **Bus route presence (binary categorical)**: Binary indicators from OSM data identifying road segments serving as bus routes, examining ANIME's capability to transfer categorical data and compute proportional representations for mixed-category target features.
 
-This parameter configuration represents a balanced approach suitable for urban network conflation tasks where moderate geometric variations are expected.
+3. **Number of bus lanes (intensive numeric)**: Counts of dedicated bus lanes per road segment from OSM data, assessing ANIME's capacity to compute length-weighted averages when transferring mean values from multiple source features to single target features (n:1 relationships).
+
+4. **Speed limit (discrete numeric)**: Posted speed limits from OSM data, evaluating ANIME's capability to handle discrete numerical values and compute appropriate weighted averages for target features.
+
+The source networks exhibit complex geometric representations, with OSM employing separate linestrings for each side of a street and individual lines for cycling pavements and dedicated lanes. In contrast, the target network (OS Open Roads) utilizes simplified geometry, representing each street as a single linestring regardless of lane count or adjacent infrastructure.
+This configuration evaluates ANIME's capacity to handle complex-to-simplified matching across multiple data sources simultaneously, requiring aggregation from detailed geometric representations to generalized network structures: a challenging scenario that traditional conflation approaches struggle to address comprehensively.
+
+## Illustrative example: ANIME functionality demonstration
+
+To demonstrate ANIME's core functionality, this section presents a simple illustrative example demonstrating how the algorithm identifies and quantifies geometric relationships between source and target features.
 
 ```{r}
 #| label: setup-case-study
@@ -721,26 +728,11 @@ integrated_sf <- merge(target_sf, intensive_numeric, by = "target_id", all.x = T
 integrated_sf <- merge(integrated_sf, intensive_categorical, by = "target_id", all.x = TRUE)
 ```
 
-
-The ANIME algorithm successfully identified and quantified geometric relationships between the source and target networks, generating comprehensive correspondence metrics for weighted attribute transfer.
-The algorithm processed 47 source network features and 23 target network features, producing a sparse matching matrix with 132 validated segment pairs.
-
-The matching process demonstrates ANIME's core strength in quantifying **degrees of correspondence** rather than binary matching decisions.
-The resulting sparse matrix details the shared length between every source and target feature pair, where each entry represents the geometric extent of overlap between specific features.
-@fig-plot-matches illustrates a representative one-to-many correspondence, where a single target feature matches multiple source features with different overlap magnitudes, highlighting ANIME's sophisticated handling of complex geometric relationships.
-
-```{r}
-#| label: table-match-results
-#| echo: false
-knitr::kable(
-  head(match_df),
-  caption = "Sample of matched pairs with shared length."
-)
-```
+@fig-plot-matches illustrates ANIME's approach to complex-to-simplified geometric matching, wherein multiple detailed source features (red, solid lines) are matched to a single generalized target feature (blue, dashed line). Each source feature contributes varying amounts of shared length to the target, demonstrating ANIME's quantitative correspondence measurement approach rather than binary matching decisions. This many-to-one scenario represents typical conditions when conflating detailed OSM geometries with simplified reference networks.
 
 ```{r}
 #| label: fig-plot-matches
-#| fig-cap: "Example of a one-to-many match. One target feature (blue, dashed) is matched with multiple source features (red, solid)."
+#| fig-cap: "Complex-to-simplified matching example: multiple source features (red, solid) matched to single target feature (blue, dashed) with varying shared lengths. Parameters: distance_tolerance = 2.5m, angle_tolerance = 15°."
 #| echo: false
 i <- 4
 target_feature <- target_sf[i,]
@@ -750,46 +742,44 @@ source_features <- source_sf[source_indices,]
 ggplot() +
   geom_sf(data = source_features, color = "red", linewidth = 1) +
   geom_sf(data = target_feature, linetype = "dashed", color = "blue", linewidth = 1.2) +
-  labs(title = "One-to-Many Match Example") +
   theme_void()
-
 ```
 
-The shared length results from the ANIME matching algorithm enable statistically rigorous attribute transfer using intensive interpolation methods.
-Two attribute types were successfully integrated: `speed_limit` (numeric intensive variable) and `road_type` (categorical variable converted to proportional representation).
-
-**Numeric Attribute Transfer:** Speed limit values for target features were calculated as shared-length weighted averages from all matching source features, following @eq-intensive.
-This approach ensures that the contribution of each source feature is proportional to its geometric overlap with the target, maintaining spatial accuracy in the transferred attributes.
-
-**Categorical Attribute Integration:** Road type categories were converted to dummy variables and integrated using the intensive method, yielding proportional representations for each target feature.
-The resulting proportions indicate the fraction of each target feature's length corresponding to specific road categories, enabling nuanced representation of mixed-category features.
-
-The integrated results demonstrate ANIME's capability to maintain statistical rigor while handling both continuous and categorical data through mathematically sound weighted aggregation methods.
+The underlying data structure produced by ANIME contains detailed correspondence information for every matched pair. @tbl-match-results presents a sample of the matching output, wherein each row represents a source-target pair with its corresponding shared length ($SL_{ij}$). This quantitative foundation enables robust weighted attribute transfer utilizing the mathematical methods described in Section 2.3.
 
 ```{r}
-#| label: table-attribute-integration
+#| label: tbl-match-results
 #| echo: false
 knitr::kable(
-  head(st_drop_geometry(integrated_sf)),
-  caption = "Target features with integrated attributes.",
-  digits = 2
+  head(match_df),
+  caption = "Sample of matched pairs with shared length."
 )
 ```
+
+## National-scale results: Comprehensive four-attribute integration
+
+Building upon this illustrative example, this section presents results from comprehensive national-scale analysis demonstrating ANIME's capability across four distinct attribute types. For comparison purposes, only the city centre of Edinburgh is shown below.
+
+![Data transfer comparison in central Edinburgh (Parameters: distance_tolerance = 15m, angle_tolerance = 5°)](assets/data_transfer_comparison_plot.png){#fig-data-transfer-comparison}
+
+@fig-data-transfer-comparison presents results of comprehensive four-attribute data-transfer comparison conducted using **ANIME** across central Edinburgh. The visualization demonstrates successful transfer and integration of different attribute types utilizing ANIME's quantitative correspondence framework. Each panel illustrates effective handling of distinct data integration challenges: extensive variable aggregation (Go Dutch cycling potential), binary categorical transfer (bus route presence), intensive numeric averaging (bus lane counts), and discrete value interpolation (speed limits). Interactive web maps containing complete Scottish road network outputs for each attribute type can be explored at <https://nptscot.github.io/>.
+
+As shown in @fig-data-transfer-comparison, the ANIME algorithm successfully and accurately transferred and integrated different attribute types between the source networks and the target OS road network. The matching process demonstrates ANIME's core strength in quantifying **degrees of correspondence** rather than binary matching decisions across diverse attribute scenarios, enabling the algorithm to handle complex scenarios including: n:1 aggregation for cycling potential values, proportional categorical transfer for bus route presence, weighted averaging for bus lane counts, and discrete value interpolation for speed limits. 
 
 
 # Discussion
 
 The case study results demonstrate ANIME's effectiveness in addressing key limitations of existing network conflation approaches.
-The algorithm successfully identified and quantified complex geometric relationships between topologically dissimilar networks, generating comprehensive weighted correspondence metrics that enable statistically sound attribute transfer. The following sections highlight the key algorithmic strengths demonstrated:
+The algorithm successfully identified and quantified complex geometric relationships between topologically dissimilar networks, generating comprehensive weighted correspondence metrics that enable statistically sound attribute transfer. The following analysis highlights key algorithmic strengths demonstrated:
 
-**M:N Relationship Handling**: The results show ANIME's robust handling of one-to-many and many-to-one correspondences, where single features in one network match multiple features in another.
-This capability is essential for real-world conflation scenarios where network representations differ in geometric complexity and feature granularity.
+**M:N Relationship Handling**: The results demonstrate ANIME's robust handling of one-to-many and many-to-one correspondences, wherein single features in one network match multiple features in another.
+This capability proves essential for real-world conflation scenarios where network representations differ in geometric complexity and feature granularity.
 
-**Quantitative Correspondence Assessment**: Unlike binary matching approaches, ANIME quantifies the precise degree of overlap between network features through shared length calculations.
-This enables nuanced decision-making about match quality and provides a mathematical foundation for weighted attribute integration.
+**Quantitative Correspondence Assessment**: Unlike binary matching approaches, ANIME quantifies precise degrees of overlap between network features through shared length calculations.
+This enables nuanced decision-making regarding match quality and provides mathematical foundation for weighted attribute integration.
 
-**Weighted Attribute Integration**: The successful transfer of both numeric (speed_limit) and categorical (road_type) attributes demonstrates the practical utility of ANIME's extensive and intensive interpolation methods.
-The algorithm maintains statistical rigor by properly weighting contributions based on geometric correspondence, ensuring that attribute values reflect the spatial extent of matching relationships.
+**Weighted Attribute Integration**: The successful transfer of both numeric (speed_limit) and categorical (road_type) attributes demonstrates practical utility of ANIME's extensive and intensive interpolation methods.
+The algorithm maintains statistical rigor by appropriately weighting contributions based on geometric correspondence, ensuring that attribute values reflect spatial extent of matching relationships.
 
 ## Applications and use cases
 
@@ -797,27 +787,27 @@ The flexibility of ANIME enables diverse applications across spatial data scienc
 
 **Transport Planning:**
 
-- Integration of road networks from multiple sources for comprehensive transportation analysis.
-- Conflation of historical and current road datasets for temporal analysis.
-- Matching of planned versus existing infrastructure for impact assessment.
+- Integration of road networks from multiple sources for comprehensive transportation analysis
+- Conflation of historical and current road datasets for temporal analysis
+- Matching of planned versus existing infrastructure for impact assessment
 
 **River Network Analysis:**
 
-- Reconciliation of hydrographic datasets from different mapping agencies.
-- Integration of modeled and observed stream networks for ecological studies.
-- Conflation of networks at different scales for multi-resolution analysis.
+- Reconciliation of hydrographic datasets from different mapping agencies
+- Integration of modeled and observed stream networks for ecological studies
+- Conflation of networks at different scales for multi-resolution analysis
 
 **Ecological Modeling:**
 
-- Matching of habitat corridors from different data sources.
-- Integration of species movement pathways with landscape features.
-- Conflation of ecological networks for conservation planning.
+- Matching of habitat corridors from different data sources
+- Integration of species movement pathways with landscape features
+- Conflation of ecological networks for conservation planning
 
 **Infrastructure Management:**
 
-- Utility network integration for comprehensive asset management.
-- Conflation of as-built versus design datasets for infrastructure monitoring.
-- Integration of sensor networks with physical infrastructure representations.
+- Utility network integration for comprehensive asset management
+- Conflation of as-built versus design datasets for infrastructure monitoring
+- Integration of sensor networks with physical infrastructure representations
 
 
 ## Future development directions
@@ -826,21 +816,21 @@ Future work could extend the capabilities of the algorithm in several key areas.
 
 **3D and Spherical Extensions:**
 
-- Extension to 3-dimensional coordinate systems to incorporate elevation data.
-- Development of spherical geometry support for global-scale network analysis.
-- Integration with 3D city models and Building Information Modeling (BIM) systems.
+- Extension to three-dimensional coordinate systems incorporating elevation data
+- Development of spherical geometry support for global-scale network analysis
+- Integration with 3D city models and Building Information Modeling (BIM) systems
 
 **Enhanced Geometric Processing:**
 
-- Implementation of additional shape similarity measures beyond angle-based matching.
-- Support for curved linestring matching using advanced geometric algorithms.
-- Integration of topology-aware matching for complex network structures.
+- Implementation of additional shape similarity measures beyond angle-based matching
+- Support for curved linestring matching utilizing advanced geometric algorithms
+- Integration of topology-aware matching for complex network structures
 
 **Performance Optimization:**
 
-- Parallel processing capabilities for large-scale network conflation.
-- Streaming algorithms for processing networks that exceed available memory.
-- GPU acceleration for computationally intensive geometric operations.
+- Parallel processing capabilities for large-scale network conflation
+- Streaming algorithms for processing networks exceeding available memory
+- GPU acceleration for computationally intensive geometric operations
 
 # Conclusion
 
