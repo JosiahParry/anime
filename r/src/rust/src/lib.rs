@@ -6,8 +6,8 @@ use arrow::{
 };
 use arrow_extendr::from::FromArrowRobj;
 use extendr_api::prelude::*;
-use geoarrow::array::LineStringArray;
 use geo_traits::to_geo::ToGeoLineString;
+use geoarrow::array::LineStringArray;
 use geoarrow_array::GeoArrowArrayAccessor;
 pub type ErrGeoArrowRobj = ArrowError;
 
@@ -93,11 +93,10 @@ fn interpolate_extensive_(source_var: &[f64], anime: ExternalPtr<Anime>) -> Doub
     let source_var_arr = Float64Array::from(source_var.to_vec());
     let res = anime.interpolate_extensive(&source_var_arr);
     match res {
-        Ok(r) => {
-            r.iter()
-                .map(|v| Rfloat::from(v.unwrap_or(f64::NAN)))
-                .collect::<Doubles>()
-        }
+        Ok(r) => r
+            .iter()
+            .map(|v| v.map(Rfloat::from).unwrap_or(Rfloat::na()))
+            .collect::<Doubles>(),
 
         Err(e) => throw_r_error(format!(
             "Failed to perform extensive interpolation: {:?}",
@@ -111,11 +110,10 @@ fn interpolate_intensive_(source_var: &[f64], anime: ExternalPtr<Anime>) -> Doub
     let source_var_arr = Float64Array::from(source_var.to_vec());
     let res = anime.interpolate_intensive(&source_var_arr);
     match res {
-        Ok(r) => {
-            r.iter()
-                .map(|v| Rfloat::from(v.unwrap_or(f64::NAN)))
-                .collect::<Doubles>()
-        }
+        Ok(r) => r
+            .iter()
+            .map(|v| v.map(Rfloat::from).unwrap_or(Rfloat::na()))
+            .collect::<Doubles>(),
         Err(e) => throw_r_error(format!(
             "Failed to perform extensive interpolation: {:?}",
             e.to_string()
