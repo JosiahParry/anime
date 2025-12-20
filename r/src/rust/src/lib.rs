@@ -1,16 +1,14 @@
 use anime::Anime;
 use arrow::{
-    array::{make_array, ArrayData},
+    array::{make_array, ArrayData, Float64Array},
     datatypes::Field,
     error::ArrowError,
 };
 use arrow_extendr::from::FromArrowRobj;
 use extendr_api::prelude::*;
-use geoarrow::{
-    array::{LineStringArray, NativeArrayDyn},
-    trait_::ArrayAccessor,
-    ArrayBase,
-};
+use geoarrow::array::LineStringArray;
+use geo_traits::to_geo::ToGeoLineString;
+use geoarrow_array::GeoArrowArrayAccessor;
 pub type ErrGeoArrowRobj = ArrowError;
 
 // wrapper functions around R functions to make converting from
@@ -39,7 +37,7 @@ pub fn new_field(robj: &Robj, name: &str) -> Result<Robj> {
         .call(pairlist!(name, robj))
 }
 
-fn read_geoarrow_r(robj: Robj) -> Result<NativeArrayDyn> {
+fn read_geoarrow_r(robj: Robj) -> Result<LineStringArray> {
     // extract datatype from R object
     let narrow_data_type = infer_geoarrow_schema(&robj).unwrap();
     let arrow_dt = as_data_type(&narrow_data_type).unwrap();
@@ -52,7 +50,7 @@ fn read_geoarrow_r(robj: Robj) -> Result<NativeArrayDyn> {
     let x = make_array(ArrayData::from_arrow_robj(&robj).unwrap());
 
     // create geoarrow array
-    let res = NativeArrayDyn::from_arrow_array(&x, &field).map_err(|e| e.to_string())?;
+    let res = LineStringArray::try_from((x.as_ref(), &field)).map_err(|e| e.to_string())?;
     Ok(res)
 }
 
@@ -63,21 +61,11 @@ fn init_anime(
     distance_tolerance: f64,
     angle_tolerance: f64,
 ) -> ExternalPtr<anime::Anime> {
-    let source = read_geoarrow_r(source).unwrap();
-    let target = read_geoarrow_r(target).unwrap();
-    let source = source
-        .as_any()
-        .downcast_ref::<LineStringArray>()
-        .unwrap()
-        .clone();
-    let target = target
-        .as_any()
-        .downcast_ref::<LineStringArray>()
-        .unwrap()
-        .clone();
+    let source = read_geoarrow_r(source).unwrap().clone();
+    let target = read_geoarrow_r(target).unwrap().clone();
     let mut anime = anime::Anime::load_geometries(
-        source.iter_geo_values(),
-        target.iter_geo_values(),
+        source.iter_values().map(|x| x.unwrap().to_line_string()),
+        target.iter_values().map(|x| x.unwrap().to_line_string()),
         distance_tolerance,
         angle_tolerance,
     );
@@ -102,17 +90,13 @@ fn anime_print_helper(x: ExternalPtr<Anime>) -> List {
 
 #[extendr]
 fn interpolate_extensive_(source_var: &[f64], anime: ExternalPtr<Anime>) -> Doubles {
-    let res = anime.interpolate_extensive(source_var);
+    let source_var_arr = Float64Array::from(source_var.to_vec());
+    let res = anime.interpolate_extensive(&source_var_arr);
     match res {
         Ok(r) => {
-            let mut res = (0..anime.target_lens.len())
-                .into_iter()
-                .map(|_| Rfloat::na())
-                .collect::<Doubles>();
-            for v in r {
-                res.set_elt(v.target_id, Rfloat::from(v.value));
-            }
-            res
+            r.iter()
+                .map(|v| Rfloat::from(v.unwrap_or(f64::NAN)))
+                .collect::<Doubles>()
         }
 
         Err(e) => throw_r_error(format!(
@@ -124,17 +108,13 @@ fn interpolate_extensive_(source_var: &[f64], anime: ExternalPtr<Anime>) -> Doub
 
 #[extendr]
 fn interpolate_intensive_(source_var: &[f64], anime: ExternalPtr<Anime>) -> Doubles {
-    let res = anime.interpolate_intensive(source_var);
+    let source_var_arr = Float64Array::from(source_var.to_vec());
+    let res = anime.interpolate_intensive(&source_var_arr);
     match res {
         Ok(r) => {
-            let mut res = (0..anime.target_lens.len())
-                .into_iter()
-                .map(|_| Rfloat::na())
-                .collect::<Doubles>();
-            for v in r {
-                res.set_elt(v.target_id, Rfloat::from(v.value));
-            }
-            res
+            r.iter()
+                .map(|v| Rfloat::from(v.unwrap_or(f64::NAN)))
+                .collect::<Doubles>()
         }
         Err(e) => throw_r_error(format!(
             "Failed to perform extensive interpolation: {:?}",
@@ -165,8 +145,8 @@ fn get_matches_(anime: ExternalPtr<Anime>) -> Robj {
                 let source_len = source_lens.get(ci.source_index).unwrap();
 
                 MatchRow {
-                    target_id: *idx as i32,
-                    source_id: ci.source_index as i32,
+                    target_id: (*idx as i32) + 1,
+                    source_id: (ci.source_index as i32) + 1,
                     shared_len: ci.shared_len,
                     source_weighted: ci.shared_len / source_len,
                     target_weighted: ci.shared_len / target_len,

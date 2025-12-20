@@ -9,10 +9,13 @@ crate-type = [ 'staticlib' ]
 name = 'anime'
 
 [dependencies]
-arrow = "53.0.0"
-arrow_extendr = "53.0.0"
+arrow = "55"
+arrow_extendr = "55"
 extendr-api = '*'
-geoarrow = "0.4.0-beta.3"
+geo = "0.29.3"
+geo-traits = "0.3.0"
+geoarrow = "0.4.0"
+geoarrow-array = "0.4.0"
 itertools = "0.12.0"
 anime = {git = "https://github.com/josiahparry/anime"}
 
@@ -20,5 +23,5 @@ anime = {git = "https://github.com/josiahparry/anime"}
 extendr-api = {git = "https://github.com/extendr/extendr", rev = "2c2749f5e9d13d5628399c8779c47d420246a4a1"}
 
 # uncomment for local development
-# [patch."https://github.com/josiahparry/anime"]
-# anime = { path = "../../../rust" }
+[patch."https://github.com/josiahparry/anime"]
+anime = { path = "../../../rust" }
