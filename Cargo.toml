@@ -10,7 +10,7 @@ members = [
 
 [workspace.package]
 version = "0.2.0"
-edition = "2024"
+edition = "2021"
 rust-version = "1.90"
 
 [workspace.dependencies]
@@ -19,9 +19,9 @@ arrow = "55"
 geo = "0.29.3"
 geo-traits = "0.3.0"
 geo-types = { version = "0.7.12", features = ["use-rstar_0_11"] }
-rstar = "0.11.0"
-geoarrow-array =  "0.4.0"
 geoarrow = "0.4.0"
+geoarrow-array = "0.4.0"
+rstar = "0.11.0"
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

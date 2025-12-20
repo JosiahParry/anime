@@ -42,7 +42,7 @@ dependencies = [
 
 [[package]]
 name = "anime"
-version = "0.1.2"
+version = "0.2.0"
 dependencies = [
  "arrow",
  "geo",
@@ -53,7 +53,7 @@ dependencies = [
 
 [[package]]
 name = "anime_r"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "anime",
  "arrow",

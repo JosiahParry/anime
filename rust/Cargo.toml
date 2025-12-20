@@ -1,7 +1,8 @@
 [package]
 name = "anime"
-version = "0.1.2"
-edition = "2021"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 description = "Approximate Network Matching, Integration, and Enrichment"
 license = "MIT OR Apache-2.0"
 keywords = ["geospatial", "gis", "network", "spatial", "transit"]
