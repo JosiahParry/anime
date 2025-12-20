@@ -157,3 +157,176 @@ impl Anime {
         Ok(Float64Array::from_iter_values(res))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Anime;
+    use arrow::array::Float64Array;
+    use geo_types::{coord, LineString};
+
+    fn create_test_anime() -> Anime {
+        // Create simple parallel lines for testing
+        let source: Vec<LineString> = vec![
+            LineString::new(vec![coord! {x: 0.0, y: 0.0}, coord! {x: 10.0, y: 0.0}]),
+            LineString::new(vec![coord! {x: 0.0, y: 1.0}, coord! {x: 10.0, y: 1.0}]),
+        ];
+
+        let target: Vec<LineString> = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.1},
+            coord! {x: 10.0, y: 0.1},
+        ])];
+
+        Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0)
+    }
+
+    fn create_anime_without_matches() -> Anime {
+        let source: Vec<LineString> = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+
+        let target: Vec<LineString> = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.1},
+            coord! {x: 10.0, y: 0.1},
+        ])];
+
+        Anime::load_geometries(source.into_iter(), target.into_iter(), 0.5, 5.0)
+    }
+
+    #[test]
+    fn test_interpolate_extensive_incorrect_length() {
+        let anime = create_test_anime();
+        let wrong_length_var = Float64Array::from(vec![1.0]); // Only 1 element, should be 2
+
+        let result = anime.interpolate_extensive(&wrong_length_var);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AnimeError::IncorrectLength));
+    }
+
+    #[test]
+    fn test_interpolate_intensive_incorrect_length() {
+        let anime = create_test_anime();
+        let wrong_length_var = Float64Array::from(vec![1.0]); // Only 1 element, should be 2
+
+        let result = anime.interpolate_intensive(&wrong_length_var);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AnimeError::IncorrectLength));
+    }
+
+    #[test]
+    fn test_interpolate_extensive_contains_null() {
+        let anime = create_test_anime();
+        let null_var = Float64Array::from(vec![Some(1.0), None]);
+
+        let result = anime.interpolate_extensive(&null_var);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AnimeError::ContainsNull));
+    }
+
+    #[test]
+    fn test_interpolate_intensive_contains_null() {
+        let anime = create_test_anime();
+        let null_var = Float64Array::from(vec![Some(1.0), None]);
+
+        let result = anime.interpolate_intensive(&null_var);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AnimeError::ContainsNull));
+    }
+
+    #[test]
+    fn test_interpolate_extensive_matches_not_found() {
+        let anime = create_anime_without_matches();
+        let var = Float64Array::from(vec![1.0]);
+
+        let result = anime.interpolate_extensive(&var);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AnimeError::MatchesNotFound));
+    }
+
+    #[test]
+    fn test_interpolate_intensive_matches_not_found() {
+        let anime = create_anime_without_matches();
+        let var = Float64Array::from(vec![1.0]);
+
+        let result = anime.interpolate_intensive(&var);
+
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AnimeError::MatchesNotFound));
+    }
+
+    #[test]
+    fn test_interpolate_extensive_basic() {
+        let anime = create_test_anime();
+        let source_var = Float64Array::from(vec![10.0, 20.0]);
+
+        let result = anime.interpolate_extensive(&source_var);
+
+        assert!(result.is_ok());
+        let result_array = result.unwrap();
+        assert_eq!(result_array.len(), 1);
+    }
+
+    #[test]
+    fn test_interpolate_intensive_basic() {
+        let anime = create_test_anime();
+        let source_var = Float64Array::from(vec![10.0, 20.0]);
+
+        let result = anime.interpolate_intensive(&source_var);
+
+        assert!(result.is_ok());
+        let result_array = result.unwrap();
+        assert_eq!(result_array.len(), 1);
+    }
+
+    #[test]
+    fn test_interpolate_enum_intensive() {
+        let anime = create_test_anime();
+        let source_var = Float64Array::from(vec![10.0, 20.0]);
+
+        let result = anime.interpolate(&source_var, Tensive::In);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_interpolate_enum_extensive() {
+        let anime = create_test_anime();
+        let source_var = Float64Array::from(vec![10.0, 20.0]);
+
+        let result = anime.interpolate(&source_var, Tensive::Ex);
+
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_interpolate_handles_nan() {
+        let anime = create_test_anime();
+        let source_var = Float64Array::from(vec![f64::NAN, 20.0]);
+
+        let result = anime.interpolate_extensive(&source_var);
+
+        assert!(result.is_ok());
+        let result_array = result.unwrap();
+        // Should skip NaN values and only process valid values
+        assert_eq!(result_array.len(), 1);
+    }
+
+    #[test]
+    fn test_interpolate_handles_f64_max() {
+        let anime = create_test_anime();
+        let source_var = Float64Array::from(vec![f64::MAX, 20.0]);
+
+        let result = anime.interpolate_extensive(&source_var);
+
+        assert!(result.is_ok());
+        let result_array = result.unwrap();
+        // Should skip f64::MAX values (used as NA marker)
+        assert_eq!(result_array.len(), 1);
+    }
+}
