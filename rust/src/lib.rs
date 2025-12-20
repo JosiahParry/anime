@@ -274,3 +274,244 @@ fn create_target_rtree(
 
     rstar::RTree::bulk_load(to_insert)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use geo_types::{coord, LineString};
+
+    fn create_simple_source_target() -> (Vec<LineString>, Vec<LineString>) {
+        let source = vec![
+            LineString::new(vec![coord! {x: 0.0, y: 0.0}, coord! {x: 10.0, y: 0.0}]),
+            LineString::new(vec![coord! {x: 0.0, y: 5.0}, coord! {x: 10.0, y: 5.0}]),
+        ];
+
+        let target = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.1},
+            coord! {x: 10.0, y: 0.1},
+        ])];
+
+        (source, target)
+    }
+
+    #[test]
+    fn test_anime_new() {
+        let (source, target) = create_simple_source_target();
+
+        let anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        assert_eq!(anime.distance_tolerance, 0.5);
+        assert_eq!(anime.angle_tolerance, 5.0);
+        assert_eq!(anime.source_lens.len(), 2);
+        assert_eq!(anime.target_lens.len(), 1);
+        assert!(anime.matches.get().is_some());
+    }
+
+    #[test]
+    fn test_anime_load_geometries() {
+        let (source, target) = create_simple_source_target();
+
+        let anime = Anime::load_geometries(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        assert_eq!(anime.distance_tolerance, 0.5);
+        assert_eq!(anime.angle_tolerance, 5.0);
+        assert_eq!(anime.source_lens.len(), 2);
+        assert_eq!(anime.target_lens.len(), 1);
+        assert!(anime.matches.get().is_none());
+    }
+
+    #[test]
+    fn test_anime_find_matches() {
+        let (source, target) = create_simple_source_target();
+
+        let mut anime = Anime::load_geometries(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        assert!(anime.matches.get().is_none());
+
+        let result = anime.find_matches();
+        assert!(result.is_ok());
+        assert!(anime.matches.get().is_some());
+    }
+
+    #[test]
+    fn test_anime_find_matches_already_matched() {
+        let (source, target) = create_simple_source_target();
+
+        let mut anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        // Matches already exist from new()
+        let result = anime.find_matches();
+        assert!(result.is_err());
+        assert!(matches!(result.unwrap_err(), AnimeError::AlreadyMatched(_)));
+    }
+
+    #[test]
+    fn test_source_lens_calculated() {
+        let source = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+        let target = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.1},
+            coord! {x: 10.0, y: 0.1},
+        ])];
+
+        let anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        assert_eq!(anime.source_lens.len(), 1);
+        assert_eq!(anime.source_lens[0], 10.0);
+    }
+
+    #[test]
+    fn test_target_lens_calculated() {
+        let source = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+        let target = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.1},
+            coord! {x: 5.0, y: 0.1},
+        ])];
+
+        let anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        assert_eq!(anime.target_lens.len(), 1);
+        assert_eq!(anime.target_lens[0], 5.0);
+    }
+
+    #[test]
+    fn test_parallel_lines_match() {
+        let source = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+        let target = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.1},
+            coord! {x: 10.0, y: 0.1},
+        ])];
+
+        let anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        let matches = anime.matches.get().unwrap();
+        assert!(matches.contains_key(&0));
+        assert!(!matches.is_empty());
+    }
+
+    #[test]
+    fn test_distant_lines_no_match() {
+        let source = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+        let target = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 100.0},
+            coord! {x: 10.0, y: 100.0},
+        ])];
+
+        let anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        let matches = anime.matches.get().unwrap();
+        assert!(matches.is_empty() || !matches.contains_key(&0));
+    }
+
+    #[test]
+    fn test_perpendicular_lines_no_match() {
+        let source = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+        let target = vec![LineString::new(vec![
+            coord! {x: 5.0, y: -5.0},
+            coord! {x: 5.0, y: 5.0},
+        ])];
+
+        let anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        let matches = anime.matches.get().unwrap();
+        // Perpendicular lines should not match due to angle tolerance
+        assert!(matches.is_empty() || !matches.contains_key(&0));
+    }
+
+    #[test]
+    fn test_multiple_source_to_one_target() {
+        let source = vec![
+            LineString::new(vec![coord! {x: 0.0, y: 0.0}, coord! {x: 5.0, y: 0.0}]),
+            LineString::new(vec![coord! {x: 5.0, y: 0.0}, coord! {x: 10.0, y: 0.0}]),
+        ];
+        let target = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.1},
+            coord! {x: 10.0, y: 0.1},
+        ])];
+
+        let anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        let matches = anime.matches.get().unwrap();
+        if let Some(target_matches) = matches.get(&0) {
+            // Target should potentially match both source lines
+            assert!(!target_matches.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_match_candidate_structure() {
+        let source = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+        let target = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.1},
+            coord! {x: 10.0, y: 0.1},
+        ])];
+
+        let anime = Anime::new(source.into_iter(), target.into_iter(), 0.5, 5.0);
+
+        let matches = anime.matches.get().unwrap();
+        if let Some(target_matches) = matches.get(&0) {
+            for candidate in target_matches {
+                assert!(candidate.shared_len >= 0.0);
+            }
+        }
+    }
+
+    #[test]
+    fn test_anime_error_display() {
+        let err = AnimeError::IncorrectLength;
+        assert!(err.to_string().contains("same number"));
+
+        let err = AnimeError::MatchesNotFound;
+        assert!(err.to_string().contains("matches"));
+
+        let err = AnimeError::ContainsNull;
+        assert!(err.to_string().contains("null"));
+    }
+
+    #[test]
+    fn test_create_source_rtree() {
+        let source = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+
+        let mut lens = Vec::new();
+        let tree = create_source_rtree(source.into_iter(), &mut lens);
+
+        assert_eq!(lens.len(), 1);
+        assert_eq!(lens[0], 10.0);
+        assert!(tree.size() > 0);
+    }
+
+    #[test]
+    fn test_create_target_rtree() {
+        let target = vec![LineString::new(vec![
+            coord! {x: 0.0, y: 0.0},
+            coord! {x: 10.0, y: 0.0},
+        ])];
+
+        let mut lens = Vec::new();
+        let tree = create_target_rtree(target.into_iter(), &mut lens, 0.5);
+
+        assert_eq!(lens.len(), 1);
+        assert_eq!(lens[0], 10.0);
+        assert!(tree.size() > 0);
+    }
+}

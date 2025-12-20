@@ -45,3 +45,80 @@ impl RTreeObject for TarLine {
         self.envelope()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use geo_types::coord;
+
+    #[test]
+    fn test_tarline_envelope_basic() {
+        let line = Line::new(coord! {x: 0.0, y: 0.0}, coord! {x: 10.0, y: 10.0});
+        let padding = 2.0;
+        let tarline = TarLine(line, padding);
+
+        let envelope = tarline.envelope();
+
+        // Lower left should be (-2, -2) and upper right should be (12, 12)
+        assert_eq!(envelope.lower().x(), -2.0);
+        assert_eq!(envelope.lower().y(), -2.0);
+        assert_eq!(envelope.upper().x(), 12.0);
+        assert_eq!(envelope.upper().y(), 12.0);
+    }
+
+    #[test]
+    fn test_tarline_envelope_horizontal_line() {
+        let line = Line::new(coord! {x: 0.0, y: 5.0}, coord! {x: 10.0, y: 5.0});
+        let padding = 1.0;
+        let tarline = TarLine(line, padding);
+
+        let envelope = tarline.envelope();
+
+        assert_eq!(envelope.lower().x(), -1.0);
+        assert_eq!(envelope.lower().y(), 4.0);
+        assert_eq!(envelope.upper().x(), 11.0);
+        assert_eq!(envelope.upper().y(), 6.0);
+    }
+
+    #[test]
+    fn test_tarline_envelope_vertical_line() {
+        let line = Line::new(coord! {x: 5.0, y: 0.0}, coord! {x: 5.0, y: 10.0});
+        let padding = 1.5;
+        let tarline = TarLine(line, padding);
+
+        let envelope = tarline.envelope();
+
+        assert_eq!(envelope.lower().x(), 3.5);
+        assert_eq!(envelope.lower().y(), -1.5);
+        assert_eq!(envelope.upper().x(), 6.5);
+        assert_eq!(envelope.upper().y(), 11.5);
+    }
+
+    #[test]
+    fn test_tarline_envelope_no_padding() {
+        let line = Line::new(coord! {x: 1.0, y: 2.0}, coord! {x: 3.0, y: 4.0});
+        let padding = 0.0;
+        let tarline = TarLine(line, padding);
+
+        let envelope = tarline.envelope();
+
+        assert_eq!(envelope.lower().x(), 1.0);
+        assert_eq!(envelope.lower().y(), 2.0);
+        assert_eq!(envelope.upper().x(), 3.0);
+        assert_eq!(envelope.upper().y(), 4.0);
+    }
+
+    #[test]
+    fn test_tarline_distance() {
+        let tarline = TarLine(
+            Line::new(coord! {x: 0.0, y: 0.0}, coord! {x: 10.0, y: 0.0}),
+            1.0
+        );
+        let other = Line::new(coord! {x: 0.0, y: 3.0}, coord! {x: 10.0, y: 3.0});
+
+        let distance = tarline.distance(&other);
+
+        // Parallel horizontal lines 3 units apart
+        assert_eq!(distance, 3.0);
+    }
+}

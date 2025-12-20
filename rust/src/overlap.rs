@@ -54,3 +54,77 @@ pub(crate) fn solve_no_x_overlap(y_overlap: Range<f64>, x: &Line, slope: &f64) -
     let p2 = Point::new(x2, y_overlap.end);
     (p1, p2)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use geo_types::{coord, Rect};
+
+    #[test]
+    fn test_x_range() {
+        let rect = Rect::new(coord! {x: 0.0, y: 0.0}, coord! {x: 10.0, y: 5.0});
+        let range = x_range(&rect);
+        assert_eq!(range.start, 0.0);
+        assert_eq!(range.end, 10.0);
+    }
+
+    #[test]
+    fn test_y_range() {
+        let rect = Rect::new(coord! {x: 0.0, y: 0.0}, coord! {x: 10.0, y: 5.0});
+        let range = y_range(&rect);
+        assert_eq!(range.start, 0.0);
+        assert_eq!(range.end, 5.0);
+    }
+
+    #[test]
+    fn test_overlap_range_with_overlap() {
+        let r1 = 0.0..10.0;
+        let r2 = 5.0..15.0;
+        let overlap = overlap_range(r1, r2);
+        assert!(overlap.is_some());
+        let overlap = overlap.unwrap();
+        assert_eq!(overlap.start, 5.0);
+        assert_eq!(overlap.end, 10.0);
+    }
+
+    #[test]
+    fn test_overlap_range_no_overlap() {
+        let r1 = 0.0..5.0;
+        let r2 = 10.0..15.0;
+        let overlap = overlap_range(r1, r2);
+        assert!(overlap.is_none());
+    }
+
+    #[test]
+    fn test_overlap_range_touching() {
+        let r1 = 0.0..5.0;
+        let r2 = 5.0..10.0;
+        let overlap = overlap_range(r1, r2);
+        assert!(overlap.is_some());
+        let overlap = overlap.unwrap();
+        assert_eq!(overlap.start, 5.0);
+        assert_eq!(overlap.end, 5.0);
+    }
+
+    #[test]
+    fn test_overlap_range_complete_overlap() {
+        let r1 = 0.0..10.0;
+        let r2 = 2.0..8.0;
+        let overlap = overlap_range(r1, r2);
+        assert!(overlap.is_some());
+        let overlap = overlap.unwrap();
+        assert_eq!(overlap.start, 2.0);
+        assert_eq!(overlap.end, 8.0);
+    }
+
+    #[test]
+    fn test_overlap_range_reverse_order() {
+        let r1 = 5.0..15.0;
+        let r2 = 0.0..10.0;
+        let overlap = overlap_range(r1, r2);
+        assert!(overlap.is_some());
+        let overlap = overlap.unwrap();
+        assert_eq!(overlap.start, 5.0);
+        assert_eq!(overlap.end, 10.0);
+    }
+}
