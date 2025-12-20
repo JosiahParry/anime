@@ -47,6 +47,14 @@ jobs:
           needs: check
           working-directory: r
 
+      - name: Prepare Rust sources for CI
+        run: |
+          mkdir -p r/src/rust/anime_core
+          cp -r rust/* r/src/rust/anime_core/
+          sed -i 's|../../../rust|./anime_core|' r/src/rust/Cargo.toml
+          cat r/src/rust/Cargo.toml
+        shell: bash
+
       - uses: r-lib/actions/check-r-package@v2
         with:
           upload-snapshots: true
