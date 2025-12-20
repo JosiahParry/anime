@@ -74,8 +74,6 @@ get_matches <- function(x) {
   }
 
   res <- get_matches_(x)
-  res[["target_id"]] <- res[["target_id"]] + 1L
-  res[["source_id"]] <- res[["source_id"]] + 1L
 
   structure(res, class = c("tbl", "data.frame"))
 }
@@ -120,7 +118,6 @@ interpolate_extensive <- function(x, matches) {
 
   interpolate_extensive_(as.double(x), matches)
 }
-
 
 
 #' Interpolate extensive variables
