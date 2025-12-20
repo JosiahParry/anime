@@ -19,12 +19,12 @@ jobs:
       fail-fast: false
       matrix:
         config:
-          - {os: macos-latest,   r: 'release'}
-          - {os: windows-latest, r: 'release'}
+          - { os: macos-latest, r: "release" }
+          - { os: windows-latest, r: "release" }
           # TODO: Turn on devel builds when R packages with Rust dependencies are supported
           # - {os: ubuntu-latest,   r: 'devel', http-user-agent: 'release'}
-          - {os: ubuntu-latest,   r: 'release'}
-          - {os: ubuntu-latest,   r: 'oldrel-1'}
+          - { os: ubuntu-latest, r: "release" }
+          - { os: ubuntu-latest, r: "oldrel-1" }
 
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
@@ -48,14 +48,6 @@ jobs:
           extra-packages: any::rcmdcheck
           needs: check
           working-directory: r
-
-      - name: Prepare Rust sources for CI
-        run: |
-          mkdir -p r/src/rust/anime_core
-          cp -r rust/* r/src/rust/anime_core/
-          sed -i 's|../../../rust|./anime_core|' r/src/rust/Cargo.toml
-          cat r/src/rust/Cargo.toml
-        shell: bash
 
       - uses: r-lib/actions/check-r-package@v2
         with:
