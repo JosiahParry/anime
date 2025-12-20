@@ -14,8 +14,8 @@ crate-type = ["staticlib", "lib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arrow = "54"
-geo = ">=0.29.0"
-geo-traits = "0.2.0"
+arrow = "55"
+geo = "0.29.3"
+geo-traits = "0.3.0"
 geo-types = { version = "0.7.12", features = ["use-rstar_0_11"] }
 rstar = "0.11.0"
