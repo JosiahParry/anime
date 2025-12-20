@@ -17,8 +17,6 @@ Imports:
     arrow,
     nanoarrow,
     rlang,
-    wk,
-    sf,
-    dplyr
+    wk
 Remotes: 
     geoarrow/geoarrow-r
