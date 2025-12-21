@@ -16,3 +16,10 @@ dependencies = [
 ]
 [tool.maturin]
 features = ["pyo3/extension-module"]
+
+[dependency-groups]
+dev = [
+    "geoarrow-rust-core>=0.3.0",
+    "geoarrow-rust-io>=0.3.0",
+    "pyarrow>=17.0.0",
+]

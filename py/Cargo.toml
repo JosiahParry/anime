@@ -7,11 +7,13 @@ rust-version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 crate-type = ["cdylib"]
-name = "anime_py"
+name = "anime"
 
 [dependencies]
-anime = { path = "../rust" }
-arrow = { version = "54.2.1", default-features = false }
-geoarrow = { version = "0.4.0-beta.4" }
-pyo3 = { version = "0.24.1", features = ["extension-module"] }
-pyo3-arrow = "0.8.0"
+anime = { workspace = true }
+arrow = { workspace = true, default-features = false }
+geoarrow = { workspace = true }
+geoarrow-array = { workspace = true }
+geo-traits = {workspace = true }
+pyo3 = { version = "0.25.1", features = ["extension-module"] }
+pyo3-arrow = "0.10.0"

@@ -15,7 +15,7 @@ rust-version = "1.90"
 
 [workspace.dependencies]
 anime = { path = "rust" }
-arrow = "55"
+arrow = {version = "55", default-features = false }
 geo = "0.29.3"
 geo-traits = "0.3.0"
 geo-types = { version = "0.7.12", features = ["use-rstar_0_11"] }
