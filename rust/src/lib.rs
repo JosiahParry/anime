@@ -206,8 +206,7 @@ fn find_candidate_matches(
                     } else {
                         0.0
                     };
-                    // add 1 for R indexing
-                    // ensures that no duplicates are inserted. Creates a new empty vector is needed
+                    // ensures that no duplicates are inserted. Creates a new empty vector if needed
                     let entry = matches.entry(j).or_default();
 
                     if let Some(tuple) = entry.iter_mut().find(|x| x.source_index == i) {

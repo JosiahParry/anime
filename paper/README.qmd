@@ -169,7 +169,8 @@ The ANIME matching algorithm produces a match matrix containing:
 - Target feature lengths  
 - Match records with source indices, target indices, and shared lengths ($SL_{ij}$)
 
-From this output structure, weighted proportions can be calculated on-demand:
+The output includes pre-computed weighted proportions for convenience:
+
 - Source-weighted proportion: $sw_{ij} = SL_{ij} / \text{length}(i)$
 - Target-weighted proportion: $tw_{ij} = SL_{ij} / \text{length}(j)$
 
@@ -355,7 +356,7 @@ ggplot() +
 Once two line segments $A_{ik}$ and $B_{jk}$ are identified as a match, the extent of their overlap is calculated.
 This overlap is defined as the length of the portion of segment $A_{ik}$ that is projected onto the overlapping range of either the x- or y-dimensions of the two segments.
 
-The calculation of the overlap is performed in either the x or y dimension, depending on the angle of the line segment $A_{ik}$, $\theta_{A_{ik}}$. The shared segment length is calculated using the approach illustrated in @fig-segment-overlap.
+The calculation of the overlap is performed in either the x or y dimension, depending on the angle of the line segment $A_{ik}$, $\theta_{A_{ik}}$. The shared segment length is calculated using the approach illustrated in @fig-segment-overlap. When multiple segment pairs from the same source-target feature pair match, their shared lengths are accumulated to produce the total shared length $SL_{ij}$ for that feature pair.
 
 ![Schematic illustration of segment overlap calculation. The overlap length is determined by projecting line segments onto either the x-axis (for slopes ≤45°) or y-axis (for slopes >45°) and calculating the intersection of projected ranges.](assets/line-seg-overlap-top.png){#fig-segment-overlap}
 
@@ -375,7 +376,7 @@ $$
 $$ {#eq-extensive}
  
 For intensive variables (e.g., averages, rates), the value for a target feature $j$, $\hat{Y}_j$, is estimated as the weighted average of the values from all matching source features.
-The value of each source feature $Y_i$ is weighted by the shared length of the match, $SL_{ij}$.
+The value of each source feature $Y_i$ is weighted by the shared length of the match, $SL_{ij}$.^[The implementation normalizes weights by target length for numerical consistency: $w_{ij} = SL_{ij}/\text{length}(j)$. Since $\text{length}(j)$ appears in both numerator and denominator, the result is mathematically equivalent to Eq. 3.] Target features with no valid matches (i.e., $\sum_{i} SL_{ij} = 0$) receive a value of zero.
 
 $$
 \hat{Y}_j = \frac{\sum_{i} (SL_{ij} \times Y_i)}{\sum_{i} SL_{ij}} \tag{3}
@@ -437,7 +438,7 @@ This section details the high-performance implementation of ANIME, which is writ
 \Function{IsParallelish}{$slope_{A}, slope_{B}, AT$}
   \State $angle_A \gets \arctan(slope_{A})$
   \State $angle_B \gets \arctan(slope_{B})$
-  \State \Return $(|angle_A - angle_B| \le AT)$
+  \State \Return $(|angle_A - angle_B| < AT)$
 \EndFunction
 
 \Function{IsWithinDistance}{$A_{ik}, B_{jk}, DT$}
@@ -475,11 +476,11 @@ ANIME's implementation is built around several key data structures that enable e
 
 **Core Anime Struct**
 
-The `Anime` struct serves as the central coordinator for the entire matching and interpolation process, maintaining spatial indices, tolerance parameters, and computed matches:
+The `Anime` struct serves as the central coordinator for the entire matching and interpolation process, maintaining spatial indices, tolerance parameters, feature lengths, and computed matches:
 
-$$\text{Anime} = \{Tree_A, Tree_B, DT, AT, \text{matches}\} \tag{4}$$
+$$\text{Anime} = \{Tree_A, Tree_B, DT, AT, L_A, L_B, \text{matches}\} \tag{4}$$
 
-where $Tree_A$ and $Tree_B$ are the source and target R*-trees, $DT$ is the distance tolerance, $AT$ is the angle tolerance, and $\text{matches}$ stores the computed correspondences.
+where $Tree_A$ and $Tree_B$ are the source and target R*-trees, $DT$ is the distance tolerance, $AT$ is the angle tolerance, $L_A$ and $L_B$ are vectors storing the lengths of source and target features respectively, and $\text{matches}$ stores the computed correspondences.
 
 **Target Line Structure**
 
@@ -503,8 +504,8 @@ where $\text{source\_index}$ identifies the source geometry and $\text{shared\_l
   $$m = \frac{y_2 - y_1}{x_2 - x_1} \tag{7}$$
 - **Angle Calculation**: 
   $$\theta = \arctan(m) \tag{8}$$
-- **Angle Tolerance Test**: 
-  $$|\theta_A - \theta_B| \leq AT \tag{9}$$
+- **Angle Tolerance Test**:
+  $$|\theta_A - \theta_B| < AT \tag{9}$$
 - **Envelope Expansion**:
   $$\text{AABB}_{expanded} = [x_{\min} - DT, x_{\max} + DT] \times [y_{\min} - DT, y_{\max} + DT] \tag{10}$$
 - **Distance Calculation**:
@@ -566,7 +567,7 @@ The interpolation system implements the mathematical methods described in Sectio
 The interpolation engine is built around the following key components:
 
 - **Input Validation**: Ensures attribute arrays match the expected dimensions and data types
-- **Missing Value Handling**: Automatically excludes NaN, null, and infinite values from calculations
+- **Missing Value Handling**: Automatically excludes NaN and null values (represented as `f64::MAX`) from calculations, skipping these entries during weighted aggregation
 - **Memory Management**: Uses efficient data structures (BTreeMap) for storing and retrieving match relationships
 - **Numerical Stability**: Implements robust arithmetic operations to handle edge cases
 
