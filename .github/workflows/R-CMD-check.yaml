@@ -1,9 +1,11 @@
 # Workflow derived from https://github.com/r-lib/actions/tree/v2/examples
 # Need help debugging build failures? Start at https://github.com/r-lib/actions#where-to-find-help
 on:
-  push:
-    branches: [main, master]
-  pull_request:
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches: [main, master, "**"]
 
 name: R-CMD-check.yaml
 
@@ -12,6 +14,7 @@ permissions: read-all
 jobs:
   R-CMD-check:
     runs-on: ${{ matrix.config.os }}
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     name: ${{ matrix.config.os }} (${{ matrix.config.r }})
 
