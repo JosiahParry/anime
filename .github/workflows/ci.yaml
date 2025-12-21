@@ -2,6 +2,7 @@ name: CI
 
 on:
   push:
+    branches: [main, master]
   pull_request:
   workflow_dispatch:
 
@@ -22,10 +23,10 @@ jobs:
         uses: mozilla-actions/sccache-action@v0.0.9
 
       - name: Test core algorithm
-        run: cargo test -p anime
+        run: cargo test -p anime --locked
 
       - name: Check R bindings
-        run: cargo check -p anime_r
+        run: cargo check -p anime_r --locked
 
       - name: Check Python bindings
-        run: cargo check -p anime_py
+        run: cargo check -p anime_py --locked
