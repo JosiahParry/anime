@@ -3,13 +3,8 @@ use arrow::{
     array::{Array, Float64Array},
     datatypes::Field,
 };
-use geoarrow::{
-    array::{AsNativeArray, LineStringArray, NativeArrayDyn, WKBArray},
-    datatypes::NativeType,
-    io::wkb::from_wkb,
-    trait_::ArrayAccessor,
-    NativeArray,
-};
+use geo_traits::to_geo::ToGeoLineString;
+use geoarrow::array::{from_arrow_array, AsGeoArrowArray, LineStringArray};
 use pyo3::prelude::*;
 use pyo3::{exceptions::PyTypeError, PyErr, PyResult};
 use pyo3_arrow::{PyArray, PyTable};
@@ -21,40 +16,11 @@ fn new_error(msg: String) -> PyErr {
 
 pub fn as_geoarrow_lines(x: PyArray) -> PyResult<LineStringArray> {
     let (array, field) = x.into_inner();
-    let nda = NativeArrayDyn::from_arrow_array(&array, &field);
-    let nda = match nda {
-        Ok(r) => r,
-        Err(e) => {
-            eprintln!("{e:?}");
-            let wkb = WKBArray::<i32>::try_from(array.as_ref())
-                .map_err(|_| new_error("failed to cast to wkb array".into()))?;
-
-            let array = from_wkb(
-                &wkb,
-                NativeType::Geometry(geoarrow::array::CoordType::Separated),
-                true,
-            )
-            .map_err(|_| new_error("Failed to convert from wkb".into()))?;
-
-            let aa = NativeArrayDyn::try_from(array)
-                .map_err(|_| new_error("Failed to convert wkb array to native array".into()))?;
-
-            aa
-        }
-    };
-
-    match nda.data_type() {
-        NativeType::LineString(..) => {
-            let aref = nda.as_ref();
-            Ok(aref.as_line_string().to_owned())
-        }
-        _ => {
-            return Err(new_error(format!(
-                "Input must be LineString array not {:?}",
-                nda.data_type()
-            )))
-        }
-    }
+    let res =
+        from_arrow_array(array.as_ref(), field.as_ref()).map_err(|e| new_error(e.to_string()))?;
+    res.as_line_string_opt()
+        .map(|l| l.to_owned())
+        .ok_or_else(|| new_error("Expected native LineString array".to_string()))
 }
 
 #[pyclass(frozen)]
@@ -72,11 +38,13 @@ impl PyAnime {
         distance_tolerance: f64,
         angle_tolerance: f64,
     ) -> PyResult<Self> {
+        use geoarrow_array::GeoArrowArrayAccessor;
         let source = as_geoarrow_lines(source)?;
         let target = as_geoarrow_lines(target)?;
+
         let res = Anime::new(
-            source.iter_geo_values(),
-            target.iter_geo_values(),
+            source.iter_values().map(|xi| xi.unwrap().to_line_string()),
+            target.iter_values().map(|xi| xi.unwrap().to_line_string()),
             distance_tolerance,
             angle_tolerance,
         );
