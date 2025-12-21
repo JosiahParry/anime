@@ -1,21 +1,21 @@
 [package]
-description = "Approximate Network Matching, Integration, and Enrichment"
-version = "0.1.2"
 name = "anime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+description = "Approximate Network Matching, Integration, and Enrichment"
 license = "MIT OR Apache-2.0"
-authors = ["Josiah Parry <josiah.parry@gmail.com>"]
-keywords = ["spatial", "geospatial", "network", "transit", "gis"]
-categories = ["science", "science::geo", "algorithms"]
-edition = "2021"
+keywords = ["geospatial", "gis", "network", "spatial", "transit"]
+categories = ["algorithms", "science", "science::geo"]
 
 [lib]
-crate-type = ["staticlib", "lib"]
+crate-type = ["lib", "staticlib"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-arrow = "55"
-geo = "0.29.3"
-geo-traits = "0.3.0"
-geo-types = { version = "0.7.12", features = ["use-rstar_0_11"] }
-rstar = "0.11.0"
+arrow = { workspace = true }
+geo = { workspace = true }
+geo-traits = { workspace = true }
+geo-types = { workspace = true }
+rstar = { workspace = true }

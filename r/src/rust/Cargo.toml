@@ -1,27 +1,24 @@
 [package]
 name = "anime_r"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 publish = false
-version = "0.1.0"
-edition = "2021"
 
 [lib]
 crate-type = ["staticlib"]
 name = "anime"
 
 [dependencies]
-arrow = "55"
+anime = { workspace = true }
+arrow = { workspace = true }
 arrow_extendr = "55"
 extendr-api = "*"
-geo = "0.29.3"
-geo-traits = "0.3.0"
-geoarrow = "0.4.0"
-geoarrow-array = "0.4.0"
+geo = { workspace = true }
+geo-traits = { workspace = true }
+geoarrow = { workspace = true }
+geoarrow-array = { workspace = true }
 itertools = "0.12.0"
-anime = { git = "https://github.com/josiahparry/anime" }
 
 [patch.crates-io]
 extendr-api = { git = "https://github.com/extendr/extendr", rev = "2c2749f5e9d13d5628399c8779c47d420246a4a1" }
-
-# uncomment for local development
-[patch."https://github.com/josiahparry/anime"]
-anime = { path = "../../../rust" }
