@@ -13,12 +13,9 @@ name = "anime"
 anime = { workspace = true }
 arrow = { workspace = true }
 arrow_extendr = "55"
-extendr-api = "*"
+extendr-api = "0.8.1"
 geo = { workspace = true }
 geo-traits = { workspace = true }
 geoarrow = { workspace = true }
 geoarrow-array = { workspace = true }
 itertools = "0.12.0"
-
-[patch.crates-io]
-extendr-api = { git = "https://github.com/extendr/extendr", rev = "2c2749f5e9d13d5628399c8779c47d420246a4a1" }
