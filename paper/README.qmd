@@ -162,42 +162,40 @@ These principles provide the theoretical foundation for length-weighted attribut
 
 ### Computational considerations
 
-Scalability of conflation is a critical concern for large network datasets.
-Spatial indexing structures, particularly R-trees [@guttman_rtrees_1984] and their improvements such as the R*-tree [@beckmann_rstartree_1990], are commonly used to accelerate the search for corresponding features.
-These hierarchical data structures organize objects into nested bounding boxes, enabling efficient spatial queries in O(log n) time on average rather than O(n²) brute-force comparisons.
-Recent advances have demonstrated the continued importance of R-tree indexing for network operations, with novel implementations achieving substantial performance improvements for spatial joins and nearest-neighbor searches on road network data [@kim_sgirtree_2024].
-Prior studies have emphasized the importance of maintaining network topology and using divide-and-conquer strategies to handle large areas [@nguyen_apsg_2022].
+Network conflation is frequently required at city-to-national scales, where the dominant cost lies in generating and evaluating candidate correspondences between large sets of linear features.
+Naïve all-to-all comparisons quickly become intractable, so conflation pipelines typically separate a fast spatial filtering stage from more detailed geometric and topological checks.
+Spatial indexing structures—most notably the R-tree [@guttman_rtrees_1984] and variants such as the R*-tree [@beckmann_rstartree_1990]—support this filtering step by accelerating window and nearest-neighbor queries and thereby avoiding quadratic search.
+Recent work continues to emphasize index-aware implementations for network operations, reporting substantial performance gains for spatial joins and nearest-neighbor search on road data [@kim_sgirtree_2024].
+Complementary strategies further localize computation through partitioning and topology-aware divide-and-conquer, which is particularly important when many-to-many correspondences are admissible [@nguyen_apsg_2022; @wu_voronoi_2023].
 
 ### Multi-source data integration challenges
 
-The need for robust conflation methods is amplified by the proliferation of volunteered geographic information (VGI).
-@haklay_good_2010 evaluated OpenStreetMap (OSM) positional accuracy against UK Ordnance Survey data, finding that urban OSM roads are within ~6 meters of authoritative data on average, but completeness varies significantly.
-Subsequent automated comparison frameworks have enabled systematic assessment of OSM against authoritative road datasets, revealing both the strengths and limitations of crowd-sourced data [@brovelli_osm_2016].
-At a global scale, OSM has achieved over 80% road length completeness, though coverage remains uneven between developed and developing regions [@barrington_leigh_osm_2017].
-These findings justify conflation between crowd-sourced and official datasets: neither is perfect alone, and integration can improve overall data quality.
-Transport planning tools such as the Propensity to Cycle Tool [@lovelace_propensity_2017] increasingly require integration of multiple data sources, including census data, OSM basemaps, and journey surveys, highlighting the practical importance of robust conflation methods.
+The computational constraints above are increasingly salient because road networks are now assembled from heterogeneous sources, ranging from authoritative mapping agencies to volunteered geographic information (VGI) platforms.
+OpenStreetMap (OSM) provides global coverage and rapid updates, but its quality varies systematically across space and context.
+Early evaluations found urban OSM roads within ~6 meters of UK Ordnance Survey data on average, while completeness and local accuracy were more variable [@haklay_good_2010].
+Subsequent automated comparison frameworks have enabled systematic assessment of OSM against authoritative networks, documenting how partial overlaps, misalignment, and attribution differences complicate integration [@brovelli_osm_2016].
+Although OSM has mapped a large share of the world’s road length, coverage remains uneven and data quality gradients persist between regions and settlement types [@barrington_leigh_osm_2017; @li_osm_2025].
+These findings motivate conflation between crowd-sourced and official datasets: neither source is uniformly superior, and integration can improve completeness, positional reliability, and attribute richness relative to either dataset alone.
+This practical need is reflected in applied transport planning workflows (e.g., the Propensity to Cycle Tool), which combine census inputs, survey data, and basemaps and therefore depend on robust cross-dataset alignment [@lovelace_propensity_2017].
 
 ### Reproducibility and open-source implementation
 
-The GIScience community has increasingly emphasized reproducible research practices [@kedron_reproducibility_2021], identifying barriers such as proprietary software, complex workflows, and lack of code sharing.
-Recent calls for open geographic information science practices highlight how sharing data, code, and workflows not only improves reproducibility but also accelerates innovation through community-driven enhancements [@holler_open_2025].
-Many advanced conflation algorithms remain as academic prototypes or proprietary software (e.g., Esri's toolbox), hindering scientific progress and practical adoption.
-This gap motivates the development of accessible, open-source conflation tools that can be transparently validated and extended by the research community.
+Methodological progress in conflation also depends on reproducible implementations.
+Assessments of reproducibility in GIScience identify recurring barriers, including reliance on proprietary software, opaque parameterization, and workflows that are difficult to re-run or audit [@kedron_reproducibility_2021].
+Recent calls for open geographic information science practices argue that sharing data, code, and executable workflows supports systematic comparison and cumulative improvement through community scrutiny and extension [@holler_open_2025].
+However, many conflation methods remain either as academic prototypes or within closed toolchains (e.g., proprietary toolboxes), limiting independent evaluation and uptake.
+This motivates conflation frameworks that are both methodologically explicit and distributed as accessible open-source software.
 
 ### Research gaps
 
-Despite these advances, several fundamental limitations persist across existing methods:
+Despite substantial methodological advances, four limitations recur across the conflation literature.
+First, most techniques produce match sets or merged datasets without reporting correspondence measures that can be interpreted as proportional overlap; as a result, downstream analysis often treats matches as binary decisions rather than graded relationships.
+Second, while recent optimization- and partitioning-based methods can represent many-to-many (M:N) correspondences [@lei_optimal_2019; @nguyen_apsg_2022], these capabilities are frequently obtained through complex modeling choices or post-hoc grouping, and partial matches are rarely treated as first-class outputs.
+Third, attribute transfer is seldom grounded in spatial interpolation theory: once geometries are aligned, apportionment of extensive variables and treatment of intensive variables are often handled as ad hoc post-processing rather than as a core methodological step.
+Fourth, reproducibility remains uneven because many methods are not distributed as usable, open implementations, limiting independent benchmarking and practical adoption.
 
-1. **Lack of quantitative correspondence measures**: Most conflation techniques produce merged datasets without explicitly quantifying match strength—results are "matched" or not, with few methods integrating correspondence scores into subsequent analysis.
-
-2. **Limited many-to-many handling**: While recent optimization-based methods allow M:N matches [@lei_optimal_2019; @nguyen_apsg_2022], they often require complex modeling or post-hoc adjustments. No simple, widely-adopted approach inherently treats partial matches as first-class outputs.
-
-3. **Disconnection from interpolation theory**: Prior conflation research seldom addresses how to transfer attributes once geometries are matched, often treating it as a trivial last step rather than grounding it in spatial interpolation principles.
-
-4. **Reproducibility barriers**: Many cutting-edge conflation methods are not available as ready-to-use software, limiting adoption and validation by practitioners.
-
-A fundamental limitation shared across existing methods is their reliance on binary matching frameworks that inadequately represent the **partial correspondences** characteristic of real-world network data.
-These approaches fail to quantify the degree of overlap between features, limiting their applicability for weighted attribute transfer and preventing accurate representation of complex geometric relationships.
+Collectively, these limitations reflect an underlying tendency to frame conflation as a discrete matching problem, even though real-world networks exhibit partial and overlapping correspondences.
+Without explicit quantification of overlap, it is difficult to propagate information across complex relationships and to perform statistically defensible, length-weighted attribute transfer.
 
 ## ANIME: A novel approach and research objectives
 
@@ -1018,4 +1016,3 @@ All analysis code for this manuscript is available at <https://github.com/Josiah
 
 ::: {#refs}
 :::
-
