@@ -56,8 +56,8 @@ This paper presents ANIME (Approximate Network Integration, Matching and Enrichm
 ANIME quantifies the degree of correspondence between line geometries through shared length calculations, enabling robust handling of m:n relationships and complex topological dissimilarities.
 The algorithm leverages R*-tree spatial indexing with angle and distance-based matching criteria, combined with overlap computation methods that adapt to line segment orientation.
 The algorithm computes shared length ($SL_{ij}$) between corresponding features, providing the foundation for extensive and intensive attribute interpolation methods that enable statistically sound attribute transfer.
-Experimental validation demonstrates fast and memory efficient performance handling generalized-to-detailed geometry matching, one-to-many correspondences, and attribute integration.
-Applications span transport planning, hydrographic conflation, ecological modeling, and infrastructure management, offering a robust foundation for complex geospatial integration tasks requiring weighted aggregations and feature subset identification based on shared geometric characteristics.
+A case study on Scottish transport networks demonstrates effective handling of generalized-to-detailed geometry matching and multi-source attribute integration.
+Applications span transport planning, hydrographic conflation, ecological modeling, and infrastructure management.
 
 # Keywords {.unnumbered}
 
@@ -96,7 +96,8 @@ In the absence of reliable semantic information or join keys, a purely geometric
 ## Existing approaches and limitations
 
 Conflation, the process of aligning and integrating geospatial datasets, has been a subject of research for decades [@ruiz_digital_2011].
-The extensive literature on network conflation predominantly frames the problem as binary feature classification, determining whether a source feature matches a target feature based on geometric similarity measures including proximity, orientation (angular similarity), length ratios, and shape similarity metrics such as Fréchet distance, Hausdorff distance, or vertex-based Euclidean measures [@samal_feature_2004].
+The extensive literature on network conflation predominantly frames the problem as binary feature classification, determining whether a source feature matches a target feature.
+Classification relies on geometric similarity measures including proximity, orientation (angular similarity), length ratios, and shape similarity metrics such as Fréchet distance, Hausdorff distance, or vertex-based Euclidean measures [@samal_feature_2004].
 
 ### Traditional conflation methods
 
@@ -104,7 +105,8 @@ Early conflation methods established foundational approaches that remain influen
 Buffer-based methods, exemplified by @goodchild_simple_1997, calculate proportional coverage between geometries by drawing tolerance zones around features and measuring overlap.
 While pioneering, these approaches produce binary matching decisions (inside buffer = match, outside = non-match) and lack robust handling of complex topological relationships.
 The Java Conflation Suite [@davis_java_2003] provides a comprehensive toolkit but remains similarly limited to binary matching decisions.
-Feature-based approaches [@samal_feature_2004; @mustiere_matching_2008] improved upon these methods by incorporating both geometric and topological properties, introducing the concept of partial (1:M or M:N) matches through bottom-up (local geometric) and top-down (global topologic) procedures.
+Feature-based approaches [@samal_feature_2004; @mustiere_matching_2008] improved upon these methods by incorporating both geometric and topological properties.
+These approaches introduced the concept of partial (1:M or M:N) matches through bottom-up (local geometric) and top-down (global topologic) procedures.
 However, these methods often required manual intervention for complex split/merge scenarios.
 
 ### Recent algorithmic advances
@@ -112,11 +114,31 @@ However, these methods often required manual intervention for complex split/merg
 Recent innovations have recast conflation as an optimization problem.
 @lei_optimal_2019 developed a network flow-based approach that formulates matching as selecting flows (matches) that minimize total discrepancy, achieving high match accuracy (>95%) while supporting partial matches through flow splitting.
 This work was extended by @lei_topological_2024 to incorporate topological constraints through an optimized node-arc conflation model.
-Graph-based and multi-stage approaches have also emerged: @nguyen_apsg_2022 introduced an area partitioning and subgraph growing (APSG) method that uses Voronoi diagrams to break regions into localities, achieving high precision and recall (F1-scores > 0.9) by explicitly handling missing features and representation differences.
+Graph-based and multi-stage approaches have also emerged.
+@nguyen_apsg_2022 introduced an area partitioning and subgraph growing (APSG) method that uses Voronoi diagrams to break regions into localities, achieving high precision and recall (F1-scores > 0.9) by explicitly handling missing features and representation differences.
 @zhang_methodology_2023 demonstrated production-grade conflation achieving ~99% match accuracy on statewide road networks using intersection-based matching with fuzzy logic to accommodate geometry and naming discrepancies.
 
 Advanced algorithmic approaches also include the delimited strokes algorithm [@zhang_methods_nodate], the overline method [@morgan_travel_2021], and commercial solutions like Esri's conflation toolset [@esri_conflation_2023], which combines buffer analysis with multivariate similarity metrics.
 Machine learning approaches, such as @kim_conflation_2017's C4.5 decision tree using spatial similarity measures (linear directional mean, shorter line median Hausdorff distance, absolute cosine similarity), attempt to automate classification decisions but remain constrained by binary output frameworks.
+
+### Comparative analysis of conflation methods
+
+@tbl-comparison provides a systematic comparison of existing conflation methods across key dimensions relevant to practical network integration tasks.
+
+| Method | Year | M:N Support | Output Type | Open Source | Attribute Transfer |
+|--------|------|-------------|-------------|-------------|-------------------|
+| Buffer Method [@goodchild_simple_1997] | 1997 | No (1:1) | Binary | N/A | No |
+| Java Conflation Suite [@davis_java_2003] | 2003 | Limited (1:m) | Binary | Yes | Limited |
+| Feature-based [@samal_feature_2004] | 2004 | Limited (1:m) | Binary | No | No |
+| Delimited Strokes [@zhang_methods_nodate] | 2006 | No (1:1) | Binary | No | No |
+| Network Flow [@lei_optimal_2019] | 2019 | Yes (m:n) | Flow values | No | Limited |
+| APSG [@nguyen_apsg_2022] | 2022 | Yes (m:n) | Binary | No | No |
+| Esri Conflation [@esri_conflation_2023] | 2023 | Limited (1:m) | Similarity score | No | Yes |
+| **ANIME (This work)** | **2025** | **Yes (m:n)** | **Shared length** | **Yes** | **Yes** |
+
+: Comparison of network conflation methods. ANIME is distinguished by native m:n support, quantitative shared length output, open-source availability, and integrated attribute transfer capabilities. {#tbl-comparison}
+
+As shown in @tbl-comparison, ANIME addresses key limitations of existing methods by providing: (1) native support for complex m:n relationships through segment-level decomposition, (2) quantitative correspondence measurement via shared length calculations rather than binary decisions, (3) open-source implementation ensuring reproducibility and community extensibility, and (4) mathematically grounded attribute transfer methods integrated directly into the conflation workflow.
 
 ### Spatial interpolation theory for attribute transfer
 
@@ -389,7 +411,7 @@ If both conditions are satisfied, the segments are considered a match.@fig-geome
 
 ```{r}
 #| label: fig-geometric-validation
-#| fig-cap: "Geometric validation example."
+#| fig-cap: "Geometric validation example showing source line segments (solid) matched to target segments (dashed) within 15° angular and 2.5m distance tolerance. Multiple source features correspond to a single target feature, demonstrating m:n relationship handling."
 mtx <- anime::anime(
   rnet_y,
   rnet_x,
@@ -418,7 +440,7 @@ This overlap is defined as the length of the portion of segment $A_{ik}$ that is
 
 The calculation of the overlap is performed in either the x or y dimension, depending on the angle of the line segment $A_{ik}$, $\theta_{A_{ik}}$. The shared segment length is calculated using the approach illustrated in @fig-segment-overlap. When multiple segment pairs from the same source-target feature pair match, their shared lengths are accumulated to produce the total shared length $SL_{ij}$ for that feature pair.
 
-![Schematic illustration of segment overlap calculation. The overlap length is determined by projecting line segments onto either the x-axis (for slopes ≤45°) or y-axis (for slopes >45°) and calculating the intersection of projected ranges.](assets/line-seg-overlap-top.png){#fig-segment-overlap}
+![Schematic illustration of segment overlap calculation. The shared length is determined by projecting line segments onto either the x-axis (for slopes ≤45°) or y-axis (for slopes >45°) and calculating the intersection of projected ranges.](assets/line-seg-overlap-top.png){#fig-segment-overlap}
 
 ## Attribute integration methods
 
@@ -486,7 +508,7 @@ This section details the high-performance implementation of ANIME, which is writ
     \If{IsParallelish($slope_{A_{ik}}, slope_{B_{jk}}, AT$) and IsWithinDistance($A_{ik}, B_{jk}, DT$)}
       \State // Calculate shared segment length
       \State $overlapLength \gets$ CalculateOverlapLength($A_{ik}, B_{jk}$)
-      \State // Store matched pair and overlap length
+      \State // Store matched pair and shared length
       \State StoreOrUpdateMatch($i, j, overlapLength$)
     \EndIf
   \EndFor
@@ -720,6 +742,25 @@ The case study evaluates ANIME's capability across four distinct attribute types
 The source networks exhibit complex geometric representations, with OSM employing separate linestrings for each side of a street and individual lines for cycling pavements and dedicated lanes. In contrast, the target network (OS Open Roads) utilizes simplified geometry, representing each street as a single linestring regardless of lane count or adjacent infrastructure.
 This configuration evaluates ANIME's capacity to handle complex-to-simplified matching across multiple data sources simultaneously, requiring aggregation from detailed geometric representations to generalized network structures: a challenging scenario that traditional conflation approaches struggle to address comprehensively.
 
+## Parameter selection guidance
+
+Effective application of ANIME requires appropriate selection of the `distance_tolerance` and `angle_tolerance` parameters based on input data characteristics. @tbl-parameter-guidance provides recommended parameter ranges for common use cases.
+
+| Data Quality | Distance Tolerance | Angle Tolerance | Typical Applications |
+|--------------|-------------------|-----------------|---------------------|
+| High-precision surveyed | 2–5 m | 5–10° | Authoritative government datasets |
+| Crowd-sourced (OSM) | 5–10 m | 10–15° | OpenStreetMap, VGI sources |
+| Digitized historical | 10–20 m | 15–25° | Scanned maps, legacy datasets |
+| Mixed-source integration | 10–15 m | 10–20° | Multi-agency conflation |
+
+: Parameter selection guidance based on data quality and application context. {#tbl-parameter-guidance}
+
+**Distance tolerance** controls the maximum separation between line segments considered for matching. Lower values increase precision but may miss valid matches in geometrically imprecise datasets. Higher values improve recall but risk false positives from nearby parallel features.
+
+**Angle tolerance** determines the maximum angular difference between segments considered parallel. Organic street patterns (e.g., historic city centers) typically require larger tolerances than regular grid networks.
+
+For the Edinburgh case study, parameters of `distance_tolerance = 15m` and `angle_tolerance = 5°` were selected based on the moderate geometric precision of OSM data and the predominantly regular street grid pattern.
+
 ## Illustrative example: ANIME functionality demonstration
 
 To demonstrate ANIME's core functionality, this section presents a simple illustrative example demonstrating how the algorithm identifies and quantifies geometric relationships between source and target features.
@@ -825,7 +866,7 @@ Building upon this illustrative example, this section presents results from comp
 
 @fig-data-transfer-comparison presents results of comprehensive four-attribute data-transfer comparison conducted using **ANIME** across central Edinburgh. The visualization demonstrates successful transfer and integration of different attribute types utilizing ANIME's quantitative correspondence framework. Each panel illustrates effective handling of distinct data integration challenges: extensive variable aggregation (Go Dutch cycling potential), binary categorical transfer (bus route presence), intensive numeric averaging (bus lane counts), and discrete value interpolation (speed limits). Interactive web maps containing complete Scottish road network outputs for each attribute type can be explored at <https://nptscot.github.io/>.
 
-As shown in @fig-data-transfer-comparison, the ANIME algorithm successfully and accurately transferred and integrated different attribute types between the source networks and the target OS road network. The matching process demonstrates ANIME's core strength in quantifying **degrees of correspondence** rather than binary matching decisions across diverse attribute scenarios, enabling the algorithm to handle complex scenarios including: n:1 aggregation for cycling potential values, proportional categorical transfer for bus route presence, weighted averaging for bus lane counts, and discrete value interpolation for speed limits. 
+As shown in @fig-data-transfer-comparison, the ANIME algorithm successfully and accurately transferred and integrated different attribute types between the source networks and the target OS road network. The matching process demonstrates ANIME's core strength in quantifying **degrees of correspondence** rather than binary matching decisions across diverse attribute scenarios, enabling the algorithm to handle complex scenarios including: n:1 aggregation for cycling potential values, proportional categorical transfer for bus route presence, weighted averaging for bus lane counts, and discrete value interpolation for speed limits.
 
 
 # Discussion
@@ -841,6 +882,38 @@ This enables nuanced decision-making regarding match quality and provides mathem
 
 **Weighted Attribute Integration**: The successful transfer of both numeric (speed_limit) and categorical (road_type) attributes demonstrates practical utility of ANIME's extensive and intensive interpolation methods.
 The algorithm maintains statistical rigor by appropriately weighting contributions based on geometric correspondence, ensuring that attribute values reflect spatial extent of matching relationships.
+
+## Limitations and boundary conditions
+
+While ANIME demonstrates robust performance across diverse scenarios, several limitations warrant consideration for practitioners and future development.
+
+### Geometric constraints
+
+**Highly curved roads**: The segment-level decomposition assumes relatively straight line segments between vertices. Roads with tight curves (radius < 50m) may require higher vertex density for accurate matching. Practitioners should consider densifying vertices for curved features using tools such as `st_segmentize()` in R or `densify()` in Python prior to matching.
+
+**Elevation considerations**: The current implementation operates in 2D planar space. Networks with significant elevation changes—such as mountain roads, overpasses, or multi-level interchanges—may produce spurious matches between vertically separated but horizontally proximate features. For current applications, practitioners can filter matches using elevation attributes if available.
+
+**Topological complexity**: Junction areas with multiple converging roads present challenges for segment-level matching. Post-processing using network topology analysis can help resolve ambiguous matches in these areas.
+
+### Parameter sensitivity
+
+**Distance tolerance selection**: The `distance_tolerance` parameter critically affects match quality. Values too small (< 2m) miss valid matches due to geometric imprecision in source data; values too large (> 20m) introduce false positives from nearby parallel roads. Recommended values depend on source data quality:
+
+- High-precision surveyed networks: 2–5m
+- Crowd-sourced data (e.g., OSM): 5–10m
+- Digitized historical maps: 10–20m
+
+**Angle tolerance trade-offs**: Larger angle tolerances increase recall but reduce precision. Networks with irregular geometry (e.g., medieval city centers) may require `angle_tolerance` = 20–30°, accepting higher false positive rates that can be filtered using additional attributes.
+
+### Computational considerations
+
+**Real-time applications**: Current processing rates are suitable for batch processing but may be insufficient for real-time applications requiring sub-second response times.
+
+### Data quality dependencies
+
+**Topological errors**: Input networks with gaps (undershoots), overlaps (overshoots), or self-intersections may produce unexpected matches. Preprocessing with topology validation tools is recommended.
+
+**Semantic ambiguity**: Purely geometric matching cannot resolve cases where geometric similarity exists but semantic meaning differs. Examples include parallel roads at different elevations (highway/frontage road), separate bicycle paths adjacent to roads, and service roads parallel to main thoroughfares. Integration of semantic attributes in post-processing can help resolve these ambiguities.
 
 ## Applications and use cases
 
@@ -907,7 +980,25 @@ ANIME's core contributions represent significant advances in both theoretical fo
 
 - **Geometric Robustness**: Orientation-dependent overlap calculations ensure numerical stability across all segment orientations, addressing practical challenges in real-world geometric processing.
 
+# Data Availability Statement {.unnumbered}
 
+The datasets used in this study are publicly available from the following sources:
+
+- **Ordnance Survey Open Roads**: Available from Ordnance Survey Open Data portal under the Open Government Licence v3.0 (<https://www.ordnancesurvey.co.uk/opendatadownload>).
+- **NPTScot Network Data**: Available from the Network Planning Tool Scotland repository (<https://github.com/nptscot/networkmerge>) under MIT License.
+- **OpenStreetMap Data**: Downloaded via Overpass API for Scotland. OpenStreetMap data is available under the Open Database License (<https://www.openstreetmap.org/copyright>).
+
+Processed datasets and analysis scripts are archived at Zenodo (DOI to be assigned upon acceptance).
+
+# Code Availability Statement {.unnumbered}
+
+The ANIME algorithm is implemented as open-source software under the MIT License:
+
+- **Rust Core Library**: <https://github.com/JosiahParry/anime>
+- **R Package (anime)**: Available on CRAN via `install.packages("anime")`
+- **Python Package (anime-py)**: Available on PyPI via `pip install anime-py`
+
+All analysis code for this manuscript is available at <https://github.com/JosiahParry/anime-paper> with detailed reproduction instructions.
 
 # References
 
