@@ -7,12 +7,15 @@ author:
   - name: Josiah Parry
     affiliation: Environmental Systems Research Institute, Redlands, CA, USA 
     orcid: 0000-0001-9910-865X
+    email: josiah.parry@gmail.com
   - name: Zhao Wang
     affiliation: Leeds Institute for Transport Studies, University of Leeds, UK
     orcid: 0000-0002-4054-0533
+    email: z.wang13@leeds.ac.uk
   - name: Robin Lovelace
     affiliation: Leeds Institute for Transport Studies, University of Leeds, UK
     orcid: 0000-0001-5679-6536
+    email: r.lovelace@leeds.ac.uk
 
 format:
   pdf:
