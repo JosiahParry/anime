@@ -64,16 +64,16 @@ Applications span transport planning, hydrographic conflation, ecological modeli
 
 # Keywords {.unnumbered}
 
-Network Conflation, Spatial Data Integration, Geometric Matching, Attribute Transfer, Spatial Interpolation, R-tree Indexing, Linestring Matching
+Network Conflation, Spatial Data Integration, Geometric Matching, Many-to-Many Matching, Attribute Interpolation, Linear Feature Matching, Open Source GIS
 
 {{< pagebreak >}}
 
 # Highlights {.unnumbered}
 
-- A novel segment-level algorithm for matching topologically dissimilar linear network datasets with mathematical rigor.
-- High-performance implementation in Rust with comprehensive R and Python bindings for broad accessibility.
+- A novel open-source segment-level algorithm for matching topologically dissimilar linear network datasets with mathematical rigor.
+- High-performance implementation in Rust with comprehensive R and Python bindings for the geospatial research community.
 - Quantitative correspondence measurement using shared length calculations, supporting m:n relationships instead of 1:1 or 1:m relationships.
-- Mathematically grounded extensive and intensive attribute interpolation methods for both numeric and categorical data.
+- Mathematically grounded extensive and intensive attribute interpolation methods rooted in areal interpolation theory for both numeric and categorical data.
 
 {{< pagebreak >}}
 
