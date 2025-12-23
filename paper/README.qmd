@@ -79,49 +79,51 @@ Network Conflation, Spatial Data Integration, Geometric Matching, Many-to-Many M
 
 # Introduction
 
-A long-standing challenge in spatial data science is the reconciliation of vector linestring datasets.
-Such datasets are used in many fields, including transport planning, which increasingly requires the integration of multiple representations of linear transport networks such as those from different government agencies or commercial providers.
-These datasets often represent the same real-world phenomena but are topologically different.
-Join keys are typically absent, making it unclear which features should be matched between datasets.
-Even when features can be identified for joining, direct attribute transfer is often inappropriate because attributes (e.g., speed limits, traffic volumes) are intended to be associated with specific geometries and may not have direct counterparts in the other dataset.
-Consequently, a weighted approach is necessary to accurately associate attributes during integration.
-As noted by @lei_optimal_2019, "Due to the complexity and limitations of existing methods, planners and analysts often have to employ a heavily manual conflation^[Conflation is a two-step process that first identifies corresponding geometries between datasets and then transfers attributes between matched features.] process, which is time‐consuming and often prohibitively expensive."
+Reconciling vector linestring datasets from disparate sources remains a fundamental challenge in spatial data science.
+Transport planning, in particular, increasingly requires the integration of multiple representations of linear networks—whether from government agencies, commercial providers, or crowd-sourced platforms—that depict the same real-world infrastructure yet differ in topology, geometry, and attribute schemas.
+Join keys are typically absent, making it unclear which features correspond between datasets.
+Even when corresponding features can be identified, direct attribute transfer is often inappropriate: attributes such as speed limits or traffic volumes are associated with specific geometries that may lack direct counterparts in the target dataset.
+A weighted approach is therefore necessary to accurately associate attributes during integration.
+As @lei_optimal_2019 observed, "Due to the complexity and limitations of existing methods, planners and analysts often have to employ a heavily manual conflation^[Conflation is a two-step process that first identifies corresponding geometries between datasets and then transfers attributes between matched features.] process, which is time‐consuming and often prohibitively expensive."
 
-The need for robust automated integration methods is growing as vast quantities of geospatial data are derived from remotely sensed imagery and large-scale feature extraction projects.
-Features from these sources may not be complete or entirely accurate but they may be used to supplement missing data or reflect recent changes in a primary dataset.
-Several persistent challenges complicate the matching process: 
+The need for robust automated integration methods is growing as vast quantities of geospatial data emerge from remotely sensed imagery and large-scale feature extraction projects.
+Although such data may be incomplete or geometrically imprecise, they can supplement missing information or capture recent infrastructure changes.
+Recent assessments confirm that even mature crowd-sourced datasets like OpenStreetMap exhibit significant spatial variation in completeness and positional accuracy, with rural areas showing substantially lower data quality than urban regions [@li_osm_2025; @barrington_leigh_osm_2017].
+Several persistent challenges complicate the matching process:
 
-- matching generalized geometry to more detailed representations [@kim_conflation_2017; @mustiere_matching_2008]
-- different representations of the same feature (e.g., a multi-lane highway as a single line in one dataset and multiple parallel lines in another [@zhang_methods_nodate])
--  addressing one-to-many or many-to-many correspondence scenarios
+- matching generalized geometry to more detailed representations [@kim_conflation_2017; @mustiere_matching_2008];
+- reconciling different representations of the same feature, such as a multi-lane highway depicted as a single line in one dataset and multiple parallel lines in another [@zhang_methods_nodate]; and
+- addressing one-to-many or many-to-many correspondence scenarios where no simple bijective mapping exists.
+
 In the absence of reliable semantic information or join keys, a purely geometric approach becomes essential [@samal_feature_2004].
 
 ## Existing approaches and limitations
 
-Conflation, the process of aligning and integrating geospatial datasets, has been a subject of research for decades [@ruiz_digital_2011].
-The extensive literature on network conflation predominantly frames the problem as binary feature classification, determining whether a source feature matches a target feature.
-Classification relies on geometric similarity measures including proximity, orientation (angular similarity), length ratios, and shape similarity metrics such as Fréchet distance, Hausdorff distance, or vertex-based Euclidean measures [@samal_feature_2004].
+Conflation—the process of aligning and integrating geospatial datasets—has been a subject of research for decades [@ruiz_digital_2011], with comprehensive surveys cataloguing the extensive range of similarity measures and matching algorithms developed for vector data [@xavier_survey_2016].
+The literature predominantly frames network conflation as binary feature classification: determining whether a source feature matches a target feature based on geometric similarity measures such as proximity, orientation, length ratios, and shape metrics including Fréchet and Hausdorff distances [@samal_feature_2004].
 
 ### Traditional conflation methods
 
-Early conflation methods established foundational approaches that remain influential.
-Buffer-based methods, exemplified by @goodchild_simple_1997, calculate proportional coverage between geometries by drawing tolerance zones around features and measuring overlap.
-While pioneering, these approaches produce binary matching decisions (inside buffer = match, outside = non-match) and lack robust handling of complex topological relationships.
-Feature-based approaches [@samal_feature_2004; @mustiere_matching_2008] improved upon these methods by incorporating both geometric and topological properties.
-These approaches introduced the concept of partial (1:M or M:N) matches through bottom-up (local geometric) and top-down (global topologic) procedures.
-However, these methods often required manual intervention for complex split/merge scenarios.
+Early conflation methods established foundational approaches that remain influential today.
+Buffer-based methods, exemplified by @goodchild_simple_1997, draw tolerance zones around features and measure overlap to calculate proportional coverage.
+While pioneering, these approaches yield binary matching decisions—inside buffer equals match, outside equals non-match—and struggle with complex topological relationships.
+Feature-based approaches [@samal_feature_2004; @mustiere_matching_2008] advanced the field by incorporating both geometric and topological properties, introducing partial (1:m or m:n) matches through combined bottom-up (local geometric) and top-down (global topologic) procedures.
+However, such methods often required manual intervention for complex split/merge scenarios, limiting their scalability.
 
 ### Recent algorithmic advances
 
-Recent innovations have recast conflation as an optimization problem.
-@lei_optimal_2019 developed a network flow-based approach that formulates matching as selecting flows (matches) that minimize total discrepancy, achieving high match accuracy (>95%) while supporting partial matches through flow splitting.
-This work was extended by @lei_topological_2024 to incorporate topological constraints through an optimized node-arc conflation model.
-Graph-based and multi-stage approaches have also emerged.
-@nguyen_apsg_2022 introduced an area partitioning and subgraph growing (APSG) method that uses Voronoi diagrams to break regions into localities, achieving high precision and recall (F1-scores > 0.9) by explicitly handling missing features and representation differences.
-@zhang_methodology_2023 demonstrated production-grade conflation achieving ~99% match accuracy on statewide road networks using intersection-based matching with fuzzy logic to accommodate geometry and naming discrepancies.
+Recent innovations have recast conflation as an optimization problem, seeking globally optimal match assignments rather than greedy pairwise decisions.
+@lei_optimal_2019 developed a network flow-based approach that formulates matching as selecting flows (matches) that minimize total discrepancy, achieving match accuracy exceeding 95% while supporting partial matches through flow splitting.
+This framework was extended by @lei_topological_2024 to incorporate topological constraints via an optimized node-arc conflation model, and by @wu_mincost_2022 through min-cost network flow relaxation that achieves optimal matching under geometric constraints.
+Graph-based and multi-stage approaches have also emerged, leveraging spatial decomposition to manage complexity.
+@nguyen_apsg_2022 introduced an area partitioning and subgraph growing (APSG) method that uses Voronoi diagrams to partition regions into localities, achieving F1-scores exceeding 0.9 by explicitly handling missing features and representation differences.
+Similarly, @wu_voronoi_2023 proposed a Voronoi-based road network conflation method (VAMRN) that handles complex match cases (1:1, 1:n, m:n) by combining neighboring segments, improving F-scores by 4–30% while achieving 90% faster processing than probabilistic relaxation baselines.
+At the production scale, @zhang_methodology_2023 demonstrated statewide road network conflation with approximately 99% match accuracy using intersection-based matching with fuzzy logic.
 
-Advanced algorithmic approaches also include the delimited strokes algorithm [@zhang_methods_nodate], the overline method [@morgan_travel_2021], and commercial solutions like Esri's conflation toolset [@esri_conflation_2023], which combines buffer analysis with multivariate similarity metrics.
-Machine learning approaches, such as @kim_conflation_2017's C4.5 decision tree using spatial similarity measures (linear directional mean, shorter line median Hausdorff distance, absolute cosine similarity), attempt to automate classification decisions but remain constrained by binary output frameworks.
+Beyond optimization and graph-based methods, other algorithmic approaches include the delimited strokes algorithm [@zhang_methods_nodate], the overline method for flow aggregation [@morgan_travel_2021], and commercial solutions such as Esri's conflation toolset [@esri_conflation_2023].
+Recent work has also explored orientation-sensitive similarity measures, with @lei_turning_2021 demonstrating that turning function distance better differentiates road shapes than classic Hausdorff distance.
+Machine learning approaches have attempted to automate classification decisions: @kim_conflation_2017 employed C4.5 decision trees using spatial similarity measures, while more recent deep learning approaches using graph neural networks show promise in identifying complex matching patterns across multi-scale datasets [@huang_gnn_2023].
+Despite these advances, all such methods remain constrained by binary output frameworks that classify feature pairs as matched or unmatched.
 
 ### Comparative analysis of conflation methods
 
@@ -133,7 +135,10 @@ Machine learning approaches, such as @kim_conflation_2017's C4.5 decision tree u
 | Feature-based [@samal_feature_2004] | 2004 | Limited (1:m) | Binary | No | No |
 | Delimited Strokes [@zhang_methods_nodate] | 2006 | No (1:1) | Binary | No | No |
 | Network Flow [@lei_optimal_2019] | 2019 | Yes (m:n) | Flow values | No | Limited |
+| Min-Cost Flow [@wu_mincost_2022] | 2022 | Yes (m:n) | Optimal pairs | No | No |
 | APSG [@nguyen_apsg_2022] | 2022 | Yes (m:n) | Binary | No | No |
+| Voronoi VAMRN [@wu_voronoi_2023] | 2023 | Yes (m:n) | Binary | No | No |
+| GNN Pattern [@huang_gnn_2023] | 2023 | Yes (m:n) | Pattern labels | No | No |
 | Esri Conflation [@esri_conflation_2023] | 2023 | Limited (1:m) | Similarity score | No | Yes |
 | **ANIME (This work)** | **2025** | **Yes (m:n)** | **Shared length** | **Yes** | **Yes** |
 
@@ -143,34 +148,39 @@ As shown in @tbl-comparison, ANIME addresses key limitations of existing methods
 
 ### Spatial interpolation theory for attribute transfer
 
-A notable gap in conflation research is the rigorous treatment of attributes attached to networks.
-Transferring data such as traffic counts or road conditions from one network to another is fundamentally a spatial interpolation problem on linear features.
-Classic areal interpolation theory distinguishes between extensive and intensive variables [@scheider_extensive_2019]: extensive variables (e.g., counts, lengths) must be apportioned by area or length, whereas intensive variables (e.g., density, rates) remain invariant to aggregation.
-This distinction is crucial when transferring attributes during conflation.
+A notable gap in conflation research is the rigorous treatment of attribute transfer.
+Transferring data such as traffic counts or road conditions from one network to another is fundamentally a spatial interpolation problem on linear features, yet most conflation methods treat it as a trivial post-processing step.
+Classic areal interpolation theory provides essential guidance, distinguishing between extensive variables (e.g., counts, lengths) that must be apportioned proportionally and intensive variables (e.g., density, rates) that remain invariant to aggregation [@scheider_extensive_2019].
+This distinction is crucial for statistically valid attribute transfer during conflation.
 
 @tobler_smooth_1979's pycnophylactic interpolation established the principle of mass conservation for areal data, ensuring that total extensive quantities are preserved during redistribution.
 @goodchild_areal_1980 formalized areal interpolation in GIS, introducing area-weighted assumptions for transferring data between zoning systems.
 More recent work by @comber_spatial_2019 provides a comprehensive review of interpolation techniques, distinguishing methods that use ancillary data (dasymetric mapping, street-weighted interpolation) from those that develop allocation procedures (pycnophylactic, areal weighting).
-@bentley_network_2013 demonstrated network interpolation specifically, allocating population data to road networks using dasymetric techniques—directly bridging areal interpolation and linear features.
-These principles provide theoretical support for length-weighted attribute enrichment strategies in network conflation.
+Notably, street-length weighting has emerged as an effective ancillary approach for distributing extensive variables along road networks.
+@bentley_network_2013 demonstrated this principle by allocating population data to road networks using dasymetric techniques, directly bridging areal interpolation theory and linear features.
+These principles provide the theoretical foundation for length-weighted attribute transfer in network conflation.
 
 ### Computational considerations
 
 Scalability of conflation is a critical concern for large network datasets.
 Spatial indexing structures, particularly R-trees [@guttman_rtrees_1984] and their improvements such as the R*-tree [@beckmann_rstartree_1990], are commonly used to accelerate the search for corresponding features.
 These hierarchical data structures organize objects into nested bounding boxes, enabling efficient spatial queries in O(log n) time on average rather than O(n²) brute-force comparisons.
+Recent advances have demonstrated the continued importance of R-tree indexing for network operations, with novel implementations achieving substantial performance improvements for spatial joins and nearest-neighbor searches on road network data [@kim_sgirtree_2024].
 Prior studies have emphasized the importance of maintaining network topology and using divide-and-conquer strategies to handle large areas [@nguyen_apsg_2022].
 
 ### Multi-source data integration challenges
 
 The need for robust conflation methods is amplified by the proliferation of volunteered geographic information (VGI).
 @haklay_good_2010 evaluated OpenStreetMap (OSM) positional accuracy against UK Ordnance Survey data, finding that urban OSM roads are within ~6 meters of authoritative data on average, but completeness varies significantly.
+Subsequent automated comparison frameworks have enabled systematic assessment of OSM against authoritative road datasets, revealing both the strengths and limitations of crowd-sourced data [@brovelli_osm_2016].
+At a global scale, OSM has achieved over 80% road length completeness, though coverage remains uneven between developed and developing regions [@barrington_leigh_osm_2017].
 These findings justify conflation between crowd-sourced and official datasets: neither is perfect alone, and integration can improve overall data quality.
 Transport planning tools such as the Propensity to Cycle Tool [@lovelace_propensity_2017] increasingly require integration of multiple data sources, including census data, OSM basemaps, and journey surveys, highlighting the practical importance of robust conflation methods.
 
 ### Reproducibility and open-source implementation
 
 The GIScience community has increasingly emphasized reproducible research practices [@kedron_reproducibility_2021], identifying barriers such as proprietary software, complex workflows, and lack of code sharing.
+Recent calls for open geographic information science practices highlight how sharing data, code, and workflows not only improves reproducibility but also accelerates innovation through community-driven enhancements [@holler_open_2025].
 Many advanced conflation algorithms remain as academic prototypes or proprietary software (e.g., Esri's toolbox), hindering scientific progress and practical adoption.
 This gap motivates the development of accessible, open-source conflation tools that can be transparently validated and extended by the research community.
 
@@ -877,12 +887,15 @@ The algorithm successfully identified and quantified complex geometric relations
 
 **M:N Relationship Handling**: The results demonstrate ANIME's robust handling of one-to-many and many-to-one correspondences, wherein single features in one network match multiple features in another.
 This capability proves essential for real-world conflation scenarios where network representations differ in geometric complexity and feature granularity.
+While recent methods such as Voronoi-based approaches [@wu_voronoi_2023] and subgraph growing algorithms [@nguyen_apsg_2022] also support m:n matching, ANIME uniquely provides quantitative overlap measures rather than binary match decisions.
 
 **Quantitative Correspondence Assessment**: Unlike binary matching approaches, ANIME quantifies precise degrees of overlap between network features through shared length calculations.
 This enables nuanced decision-making regarding match quality and provides mathematical foundation for weighted attribute integration.
+Traditional similarity measures catalogued in prior surveys [@xavier_survey_2016] provide match scores but not proportional overlap values suitable for attribute apportionment.
 
 **Weighted Attribute Integration**: The successful transfer of both numeric (speed_limit) and categorical (road_type) attributes demonstrates practical utility of ANIME's extensive and intensive interpolation methods.
 The algorithm maintains statistical rigor by appropriately weighting contributions based on geometric correspondence, ensuring that attribute values reflect spatial extent of matching relationships.
+This approach builds on established areal interpolation principles [@comber_spatial_2019] and extends the flow aggregation concepts demonstrated by @morgan_travel_2021 to arbitrary network conflation scenarios.
 
 ## Limitations and boundary conditions
 
