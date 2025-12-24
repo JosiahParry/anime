@@ -53,7 +53,7 @@ quarto::quarto_render("paper/README.qmd")
 
 # Abstract {.unnumbered}
 
-Reconciling topologically different linestrings is a fundamental challenge in spatial data science, particularly when integrating network datasets from disparate sources.
+Reconciling topologically different linestrings is a fundamental challenge in spatial data science, particularly when integrating linestring datasets representing spatial networks (roads, rivers, utilities) from disparate sources.
 Existing methods can be limiting due to absence of join keys and the requirement of direct transfer of attributes.
 This paper presents ANIME (Approximate Network Integration, Matching and Enrichment), a novel segment-level geometric matching algorithm implemented in a high-performance, open-source Rust library with bindings to R and Python.
 ANIME quantifies the degree of correspondence between line geometries through shared length calculations, enabling robust handling of m:n relationships and complex topological dissimilarities.
@@ -70,7 +70,7 @@ Network Conflation, Spatial Data Integration, Geometric Matching, Many-to-Many M
 
 # Highlights {.unnumbered}
 
-- A novel open-source segment-level algorithm for matching topologically dissimilar linear network datasets with mathematical rigor.
+- A novel open-source segment-level algorithm for matching topologically dissimilar linestring datasets with mathematical rigor.
 - High-performance implementation in Rust with comprehensive R and Python bindings for the geospatial research community.
 - Quantitative correspondence measurement using shared length calculations, supporting m:n relationships instead of 1:1 or 1:m relationships.
 - Mathematically grounded extensive and intensive attribute interpolation methods rooted in areal interpolation theory for both numeric and categorical data.
@@ -81,6 +81,7 @@ Network Conflation, Spatial Data Integration, Geometric Matching, Many-to-Many M
 
 Reconciling vector linestring datasets from disparate sources remains a fundamental challenge in spatial data science.
 Transport planning, in particular, increasingly requires the integration of multiple representations of linear networks, whether from government agencies, commercial providers, or crowd-sourced platforms, that depict the same real-world infrastructure yet differ in topology, geometry, and attribute schemas.
+Throughout this paper, we use "network" to refer to spatial datasets composed of linestring geometries representing connected linear features—roads, rivers, pipelines, power lines, or any other infrastructure that can be modeled as collections of line segments.
 Join keys are typically absent, making it unclear which features correspond between datasets.
 Even when corresponding features can be identified, direct attribute transfer is often inappropriate: attributes such as speed limits or traffic volumes are associated with specific geometries that may lack direct counterparts in the target dataset.
 A weighted approach is therefore necessary to accurately associate attributes during integration.
@@ -206,11 +207,11 @@ ANIME employs segment-level geometric analysis to quantify partial overlaps with
 
 This work aims to address the limitations of existing methods through four primary research objectives:
 
-1.  **Develop a quantitative correspondence framework** that measures degrees of geometric overlap rather than binary matching decisions, enabling precise representation of partial correspondences between network features.
+1.  **Develop a quantitative correspondence framework** that measures degrees of geometric overlap rather than binary matching decisions, enabling precise representation of partial correspondences between linestring features.
 
 2.  **Establish mathematical foundations** for weighted attribute transfer through rigorous geometric analysis and spatial interpolation theory.
 
-3.  **Design and implement** a high-performance algorithmic solution that scales efficiently for large network datasets while maintaining broad accessibility across programming environments.
+3.  **Design and implement** a high-performance algorithmic solution that scales efficiently for large linestring datasets while maintaining broad accessibility across programming environments.
 
 4.  **Validate the approach** through comprehensive testing on real-world transportation networks to demonstrate practical applicability and effectiveness.
 
@@ -288,9 +289,9 @@ This segment-level decomposition provides several critical advantages over tradi
 
 1. **Topological Resilience**: Complex LineString features with different vertex densities or slight geometric variations can still be matched at the segment level, even when their overall shapes differ significantly.
 
-2. **M:N Relationship Handling**: A single segment from one network can match multiple segments from another network, and vice versa, naturally accommodating the complex correspondence patterns common in real-world network data.
+2. **M:N Relationship Handling**: A single segment from one dataset can match multiple segments from another dataset, and vice versa, naturally accommodating the complex correspondence patterns common in real-world linestring data.
 
-3. **Partial Overlap Quantification**: Rather than binary matching decisions (match/no-match), the algorithm can quantify the precise degree of correspondence between network features through segment-level shared length calculations.
+3. **Partial Overlap Quantification**: Rather than binary matching decisions (match/no-match), the algorithm can quantify the precise degree of correspondence between features through segment-level shared length calculations.
 
 4. **Computational Efficiency**: Segment-level processing enables efficient spatial indexing and reduces the complexity of geometric computations compared to complex multi-vertex LineString comparisons.
 
@@ -886,11 +887,11 @@ The case study illustrates how ANIME can address key limitations of existing net
 Across the studied networks, ANIME identified and quantified complex geometric relationships between topologically dissimilar representations and produced weighted correspondence metrics suitable for length-weighted attribute transfer.
 The following analysis highlights key algorithmic properties illustrated:
 
-**M:N Relationship Handling**: The results demonstrate ANIME's robust handling of one-to-many and many-to-one correspondences, wherein single features in one network match multiple features in another.
-This capability proves essential for real-world conflation scenarios where network representations differ in geometric complexity and feature granularity.
+**M:N Relationship Handling**: The results demonstrate ANIME's robust handling of one-to-many and many-to-one correspondences, wherein single features in one dataset match multiple features in another.
+This capability proves essential for real-world conflation scenarios where linestring representations differ in geometric complexity and feature granularity.
 While recent methods such as Voronoi-based approaches [@wu_voronoi_2023] and subgraph growing algorithms [@nguyen_apsg_2022] also support m:n matching, ANIME uniquely provides quantitative overlap measures rather than binary match decisions.
 
-**Quantitative Correspondence Assessment**: Unlike binary matching approaches, ANIME quantifies precise degrees of overlap between network features through shared length calculations.
+**Quantitative Correspondence Assessment**: Unlike binary matching approaches, ANIME quantifies precise degrees of overlap between linestring features through shared length calculations.
 This enables nuanced decision-making regarding match quality and provides mathematical foundation for weighted attribute integration.
 Traditional similarity measures catalogued in prior surveys [@xavier_survey_2016] provide match scores but not proportional overlap values suitable for attribute apportionment.
 
@@ -971,7 +972,7 @@ Future work could extend the capabilities of the algorithm in several key areas.
 
 # Conclusion
 
-This paper introduced ANIME (Approximate Network Integration, Matching and Enrichment), a segment-level approach to network conflation that measures correspondence between linear features using shared length. By moving beyond binary matching decisions, ANIME supports partial correspondences and length-weighted attribute transfer for topologically dissimilar networks.
+This paper introduced ANIME (Approximate Network Integration, Matching and Enrichment), a segment-level approach to network conflation that measures correspondence between linear features using shared length. By moving beyond binary matching decisions, ANIME supports partial correspondences and length-weighted attribute transfer for topologically dissimilar linestring datasets.
 
 ANIME's core contributions represent significant advances in both theoretical foundation and practical implementation:
 
