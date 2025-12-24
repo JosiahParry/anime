@@ -234,8 +234,8 @@ The ANIME matching algorithm operates on two sets of `LineString` features with 
 
 | Variable/Parameter           | Symbol    | Description                                                                    |
 | ---------------------------- | --------- | ------------------------------------------------------------------------------ |
-| Source features              | $A$       | The input `FeatureCollection` from which attributes are transferred           |
-| Target features              | $B$       | The input `FeatureCollection` to which features are being matched             |
+| Source features              | $A$       | An array of `LineString` geometries from which attributes are transferred     |
+| Target features              | $B$       | An array of `LineString` geometries to which features are being matched       |
 | Distance Tolerance           | $DT$      | The maximum Euclidean distance for segment matching (in map units)            |
 | Angle Tolerance              | $AT$      | The maximum angle difference (degrees) for parallel segment consideration     |
 
