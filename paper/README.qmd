@@ -738,9 +738,9 @@ This architecture ensures that users in both ecosystems can benefit from the per
 # Case Study
 
 This section demonstrates ANIME's practical application and scalability through a comprehensive case study utilizing multiple national transportation datasets.
-The experimental design involves matching diverse source networks from the NPTScot (Network Planning Tool Scotland) project and OpenStreetMap (OSM) to the Ordnance Survey (OS) Open Road network (target), representing a realistic large-scale multi-source conflation scenario characteristic of national transport planning applications.
+The experimental design involves matching source networks from the NPTScot (Network Planning Tool Scotland) project and OpenStreetMap (OSM) to the Ordnance Survey (OS) Open Road network (target), representing a realistic large-scale multi-source conflation scenario characteristic of national transport planning applications.
 
-The case study evaluates ANIME's capability across four distinct attribute types that collectively demonstrate the algorithm's versatility in diverse data integration scenarios:
+The case study evaluates ANIME's capability across four distinct attribute types that collectively demonstrate the algorithm's versatility across data integration scenarios:
 
 1. **Go Dutch cycling potential (extensive variable)**: Cycling flow volumes from the NPT project under a hypothetical policy scenario, evaluating ANIME's capacity to aggregate values from multiple source features to single target features (n:1 relationships) through length-weighted summation.
 
@@ -900,7 +900,7 @@ This approach builds on established areal interpolation principles [@comber_spat
 
 ## Limitations and boundary conditions
 
-While ANIME demonstrates robust performance across diverse scenarios, several limitations warrant consideration for practitioners and future development.
+While ANIME demonstrates robust performance across the tested scenarios, several limitations warrant consideration for practitioners and future development.
 
 ### Geometric constraints
 
