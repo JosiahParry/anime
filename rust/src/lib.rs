@@ -33,11 +33,11 @@ impl Display for AnimeError {
 
 impl Error for AnimeError {}
 
-/// R* Tree for source geometries
-pub type SourceTree = rstar::RTree<GeomWithData<CachedEnvelope<geo_types::Line>, (usize, f64)>>;
+/// R* Tree for source geometries (stores index and direction vector dx, dy)
+pub type SourceTree = rstar::RTree<GeomWithData<CachedEnvelope<geo_types::Line>, (usize, f64, f64)>>;
 
-/// R* Tree for target geometries
-pub type TargetTree = rstar::RTree<GeomWithData<CachedEnvelope<TarLine>, (usize, f64)>>;
+/// R* Tree for target geometries (stores index and direction vector dx, dy)
+pub type TargetTree = rstar::RTree<GeomWithData<CachedEnvelope<TarLine>, (usize, f64, f64)>>;
 
 /// Represents a partial source <-> target match
 #[derive(Debug, Clone)]
@@ -150,6 +150,35 @@ impl Anime {
         }
     }
 }
+
+/// Check if two lines are parallel using dot product of normalized direction vectors.
+/// For undirected networks, uses absolute value to treat opposite directions as parallel.
+/// 
+/// Returns true if the lines are parallel within the given tolerance.
+fn is_parallel(l1_dx: f64, l1_dy: f64, l2_dx: f64, l2_dy: f64, tolerance_deg: f64) -> bool {
+    // Calculate the length of each line
+    let l1_len = (l1_dx.powi(2) + l1_dy.powi(2)).sqrt();
+    let l2_len = (l2_dx.powi(2) + l2_dy.powi(2)).sqrt();
+    
+    // Avoid division by zero
+    if l1_len == 0.0 || l2_len == 0.0 {
+        return false;
+    }
+    
+    // Normalize the direction vectors
+    let (l1_dx_n, l1_dy_n) = (l1_dx / l1_len, l1_dy / l1_len);
+    let (l2_dx_n, l2_dy_n) = (l2_dx / l2_len, l2_dy / l2_len);
+    
+    // Calculate the dot product (use absolute value for undirected networks)
+    let dot = (l1_dx_n * l2_dx_n + l1_dy_n * l2_dy_n).abs();
+    
+    // Convert angle tolerance to dot product threshold
+    // cos(tolerance) gives the minimum dot product for parallel lines
+    let min_dot = tolerance_deg.to_radians().cos();
+    
+    dot >= min_dot
+}
+
 fn find_candidate_matches(
     source_tree: &SourceTree,
     target_tree: &TargetTree,
@@ -163,18 +192,14 @@ fn find_candidate_matches(
         let xbb = cx.geom().bounding_rect();
         let ybb = cy.geom().0.bounding_rect();
 
-        // extract cached slopes and index positions
-        let (i, x_slope) = cx.data;
-        let (j, y_slope) = cy.data;
+        // extract cached direction vectors and index positions
+        let (i, x_dx, x_dy) = cx.data;
+        let (j, y_dx, y_dy) = cy.data;
 
-        // convert calculated slopes to degrees
-        let x_deg = x_slope.atan().to_degrees();
-        let y_deg = y_slope.atan().to_degrees();
+        // Check if lines are parallel using dot product (fixes near-vertical line issue)
+        let is_tolerant = is_parallel(x_dx, x_dy, y_dx, y_dy, angle_tolerance);
 
-        // compare slopes:
-        let is_tolerant = (x_deg - y_deg).abs() < angle_tolerance;
-
-        // if the slopes are within tolerance then we check for overlap
+        // if the lines are parallel within tolerance then we check for overlap
         if is_tolerant {
             let xx_range = x_range(&xbb);
             let xy_range = x_range(&ybb);
@@ -191,6 +216,8 @@ fn find_candidate_matches(
 
                 // if distance is less than or equal to tolerance, add the key
                 if d <= distance_tolerance {
+                    // Compute slope from direction vector for shared_len calculation
+                    let x_slope = x_dy / x_dx;
                     let shared_len = if x_slope.atan().to_degrees() <= 45.0 {
                         if x_overlap.is_some() {
                             let (p1, p2) =
@@ -237,9 +264,11 @@ fn create_source_rtree(
             let components = xi
                 .lines()
                 .map(|li| {
-                    let slope = li.slope();
+                    // Store direction vector (dx, dy) instead of just slope
+                    let dx = li.end.x - li.start.x;
+                    let dy = li.end.y - li.start.y;
                     let env = CachedEnvelope::new(li);
-                    GeomWithData::new(env, (i, slope))
+                    GeomWithData::new(env, (i, dx, dy))
                 })
                 .collect::<Vec<GeomWithData<_, _>>>();
             components
@@ -263,9 +292,11 @@ fn create_target_rtree(
                 .lines()
                 .map(|li| {
                     let tl = TarLine(li, dist);
-                    let slope = li.slope();
+                    // Store direction vector (dx, dy) instead of just slope
+                    let dx = li.end.x - li.start.x;
+                    let dy = li.end.y - li.start.y;
                     let env = CachedEnvelope::new(tl);
-                    GeomWithData::new(env, (i, slope))
+                    GeomWithData::new(env, (i, dx, dy))
                 })
                 .collect::<Vec<GeomWithData<_, _>>>();
             components
