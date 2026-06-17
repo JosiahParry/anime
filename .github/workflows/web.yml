@@ -1,0 +1,43 @@
+name: Deploy web
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+          cache: "npm"
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install wasm-pack
+        uses: jetli/wasm-pack-action@v0.4.0
+
+      - name: Cache WASM build
+        uses: actions/cache@v4
+        with:
+          path: anime_js/target
+          key: cargo-${{ hashFiles('anime_js/Cargo.lock') }}
+
+      - name: Build web app
+        run: |
+          cd web
+          npm ci
+          npm run wasm-release
+          npm run build --if-present
+          # TODO Vite suddenly broke and I have no idea why. Hack around it.
+          # new URL('anime_js_bg.wasm', import.meta.url) doesn't exist at build time, it will remain unchanged to be resolved at runtime
+          ln -s assets/anime_js_bg.wasm dist/
+
+      - name: Publish
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./web/dist/
