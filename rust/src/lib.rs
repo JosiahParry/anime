@@ -191,7 +191,7 @@ fn find_candidate_matches(
 
                 // if distance is less than or equal to tolerance, add the key
                 if d <= distance_tolerance {
-                    let shared_len = if x_slope.atan().to_degrees() <= 45.0 {
+                    let shared_len = if x_deg <= 45.0 {
                         if x_overlap.is_some() {
                             let (p1, p2) =
                                 solve_no_y_overlap(x_overlap.unwrap(), cx.geom(), &x_slope);
